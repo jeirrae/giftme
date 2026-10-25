@@ -20,7 +20,7 @@ The Inter font is bundled in `fonts/` (SIL Open Font License), so nothing loads 
 
 ## Editing the preset items
 
-All categories and items are in [`items.js`](items.js). Add, rename, or remove entries there. Each item needs a unique `id`; `styles` lists up to 5 suggestions and `size` (`shoe`, `top`, `bottom`) picks which shared size it uses; `budget` (`small`, `mid`, `big`, on a category or an item) picks the price ranges.
+All categories and items are in [`items.js`](items.js). Add, rename, or remove entries there. Each item needs a unique `id`; `styles` lists up to 5 suggestions and `size` (`shoe`, `top`, `bottom`) picks which shared size it uses; `budget` (`small`, `mid`, `big`, on a category or an item) picks the price ranges; `color: false` hides the color picker (cash, tickets, food…).
 
 ## Running locally
 

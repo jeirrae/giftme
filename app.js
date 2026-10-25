@@ -264,6 +264,14 @@
     return i ? i.def : { styles: [], size: null };
   }
 
+  // Only tangible gifts get a color picker; cash, tickets, food and the like don't.
+  function hasColor(id) {
+    const i = itemIndex.get(id);
+    if (!i) return true; // your own gifts can have colors
+    if (i.def.color === false) return false;
+    return i.category.color !== false;
+  }
+
   function sizeText(type) {
     const v = state.sizes[type];
     if (!v) return "";
@@ -277,7 +285,7 @@
     const parts = (pick.styles || []).slice();
     if (pick.other && pick.other.trim()) parts.push(pick.other.trim());
     if (def.size && sizeText(def.size)) parts.push(sizeText(def.size));
-    const colors = colorNames(pick);
+    const colors = hasColor(id) ? colorNames(pick) : "";
     if (colors) parts.push(colors);
     if (pick.note && pick.note.trim()) parts.push(pick.note.trim());
     return parts;
@@ -335,18 +343,18 @@
             <span class="box" aria-hidden="true"></span>
             <span class="item-text"><span class="item-name"></span><span class="item-meta"></span></span>
           </label>
-          <button type="button" class="details-btn" aria-expanded="false">${def.size ? "Size & color" : "Color & note"}</button>
+          <button type="button" class="details-btn" aria-expanded="false">${def.size ? "Size & color" : hasColor(id) ? "Color & note" : "Add a note"}</button>
           <button type="button" class="star" aria-pressed="false" aria-label="Favorite">☆</button>
           ${removable ? `<button type="button" class="icon-btn remove" aria-label="Remove item">×</button>` : ""}
         </div>
         <div class="details">
           <div class="more" hidden>
             ${size}
-            <div class="opt">
+            ${hasColor(id) ? `<div class="opt">
               <p class="opt-label">Color <span class="color-name"></span></p>
               <div class="swatches">${COLORS.map((c) =>
                 `<button type="button" class="swatch" data-color="${c.id}" style="--c:${c.hex}" aria-label="${c.name}" aria-pressed="false"></button>`).join("")}</div>
-            </div>
+            </div>` : ""}
             <div class="opt">
               <p class="opt-label">Note</p>
               <input type="text" class="note" maxlength="60" placeholder="Anything else? e.g. with my name on it" aria-label="Note" />
@@ -500,7 +508,8 @@
     const def = itemDef(id);
     if (def.size) renderSizeChips(li, def.size);
     $$(".swatch", li).forEach((b) => b.setAttribute("aria-pressed", String(pick.colors.includes(b.dataset.color))));
-    $(".color-name", li).textContent = colorNames(pick) || "Pick any";
+    const colorName = $(".color-name", li);
+    if (colorName) colorName.textContent = colorNames(pick) || "Pick any";
     const note = $(".note", li);
     if (document.activeElement !== note) note.value = pick.note || "";
     updateMeta(li);
@@ -514,7 +523,7 @@
     if (pick && !openDetails.has(id)) {
       const def = itemDef(id);
       if (def.size && sizeText(def.size)) parts.push(sizeText(def.size));
-      const colors = colorNames(pick);
+      const colors = hasColor(id) ? colorNames(pick) : "";
       if (colors) parts.push(colors);
       if (pick.note && pick.note.trim()) parts.push(pick.note.trim());
     }
