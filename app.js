@@ -915,7 +915,8 @@
     gold: "#f4c542",
     fav: "#c8102e",
     favInner: "#d8384d", // lighter red box inside Favorites
-    box: "#f2f2f5",
+    box: "#f2f2f5", // Something else
+    boxMain: "#e8e8ed", // Also on my list, a tad darker
     inner: "#ffffff",
     hairline: "#e5e5ea",
     flake: "#dedee4",
@@ -1171,7 +1172,7 @@
       h,
       draw(ctx, x, y) {
         roundRect(ctx, x, y, w, h, 32);
-        ctx.fillStyle = C.box;
+        ctx.fillStyle = C.boxMain;
         ctx.fill();
 
         setFont(ctx, 600, headerSize);
@@ -1244,14 +1245,15 @@
 
   // One item: name (up to 2 lines), optional note below; price and pill on the right.
   function measureRow(mctx, it, w, s, theme, opt) {
-    const nameSize = Math.max(opt.big ? 22 : 20, (opt.big ? 30 : 25) * s);
+    // Every gift name uses the same size and weight, whichever box it's in.
+    const nameSize = Math.max(20, 26 * s);
     const nameLH = nameSize * 1.25;
-    const metaSize = Math.max(14, (opt.big ? 17 : 15) * s); // the tiny "Running • US 8" line
+    const metaSize = Math.max(14, 15 * s); // the tiny "Running • US 8" line
     const metaLH = metaSize * 1.45;
-    const padY = (opt.big ? 15 : 12) * s;
+    const padY = 12 * s;
     const pillSize = Math.max(13, PILL_SIZE * s);
     const pillH = Math.max(23, PILL_H * s);
-    const priceSize = Math.max(17, (opt.big ? 24 : 21) * s);
+    const priceSize = Math.max(17, 21 * s);
 
     setFont(mctx, 600, pillSize);
     const kind = kindOf(it.kind);
@@ -1261,7 +1263,7 @@
     const priceW = price ? mctx.measureText(price).width : 0;
     const rightW = (pillW ? pillW + 14 * s : 0) + (priceW ? priceW + 16 * s : 0);
 
-    setFont(mctx, opt.big ? 600 : 500, nameSize);
+    setFont(mctx, 500, nameSize);
     const nameLines = wrapFirst(mctx, it.name, Math.max(40, w - rightW), w, 2);
     setFont(mctx, 400, metaSize);
     const metaLines = it.meta && it.meta.length ? wrap(mctx, it.meta.join("  •  "), w, 2) : [];
@@ -1272,7 +1274,7 @@
       draw(ctx, x, y) {
         const base = y + padY + nameSize * 0.92;
         const mid = base - nameSize * 0.36;
-        setFont(ctx, opt.big ? 600 : 500, nameSize);
+        setFont(ctx, 500, nameSize);
         ctx.fillStyle = theme.text;
         nameLines.forEach((ln, i) => ctx.fillText(ln, x, base + i * nameLH));
 
