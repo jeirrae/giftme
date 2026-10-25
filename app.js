@@ -837,14 +837,16 @@
         ctx.fillStyle = o.bg;
         ctx.fill();
 
-        let hx = x + padX;
+        // Title centered in the box (star included in the width).
         const hy = y + padTop + headerSize * 0.8;
+        setFont(ctx, o.star ? 700 : 600, headerSize);
+        const starW = o.star ? headerSize * 1.3 : 0;
+        let hx = x + (w - starW - ctx.measureText(o.title).width) / 2;
         if (o.star) {
           ctx.fillStyle = C.gold;
           star(ctx, hx + headerSize * 0.45, hy - headerSize * 0.36, headerSize * 0.55);
-          hx += headerSize * 1.3;
+          hx += starW;
         }
-        setFont(ctx, o.star ? 700 : 600, headerSize);
         ctx.fillStyle = o.star ? "#ffffff" : o.theme.muted;
         ctx.fillText(o.title, hx, hy);
 
@@ -906,7 +908,9 @@
 
         setFont(ctx, 600, headerSize);
         ctx.fillStyle = C.muted;
-        ctx.fillText(title, x + padX, y + padTop + headerSize * 0.8);
+        ctx.textAlign = "center";
+        ctx.fillText(title, x + w / 2, y + padTop + headerSize * 0.8);
+        ctx.textAlign = "left";
 
         let sy = y + padTop + headerH;
         sections.forEach((sec) => {
