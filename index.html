@@ -27,28 +27,7 @@
       <div class="hero">
         <p class="eyebrow">Christmas <span class="js-year"></span></p>
         <h1>What's on your list this year?</h1>
-        <p class="lead">Pick the gifts you'd love to get. <button type="button" class="link-inline" id="tips-show" hidden>How it works</button></p>
-      </div>
-
-      <div class="card tips" id="tips">
-        <div class="tips-head">
-          <h2>How it works</h2>
-          <button type="button" class="tips-close" id="tips-close">Got it</button>
-        </div>
-        <ol class="tips-list">
-          <li>
-            <span class="tip-icon tip-check" aria-hidden="true"><span class="mini-check"></span></span>
-            <span><strong>Tap a gift</strong> to add it to your list. You can pick up to 12.</span>
-          </li>
-          <li>
-            <span class="tip-icon tip-star" aria-hidden="true">★</span>
-            <span><strong>Tap the star</strong> on the ones you love most. You can pick up to 5 favorites.</span>
-          </li>
-          <li>
-            <span class="tip-icon tip-kind" aria-hidden="true">?</span>
-            <span><strong>Want or Need?</strong> Choose one, and add a note like your size or favorite color.</span>
-          </li>
-        </ol>
+        <p class="lead">Pick the gifts you'd love to get. <button type="button" class="link-inline" id="tips-show">How it works</button></p>
       </div>
 
       <div id="categories"></div>
@@ -137,6 +116,39 @@
         <span id="tally-top">0/5 favorites</span>
       </div>
       <button type="button" class="btn btn-primary" id="next-btn" disabled>Next</button>
+    </div>
+  </div>
+
+  <div class="modal" id="tutorial" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" tabindex="-1">
+      <button type="button" class="modal-x" id="tutorial-x" aria-label="Close">×</button>
+      <div class="modal-emoji" aria-hidden="true">🧝</div>
+      <h2 id="tutorial-title">Psst! Elf briefing</h2>
+      <p class="modal-lead">Santa's swamped, so we're taking your order. Here's the deal:</p>
+      <ol class="tips-list">
+        <li>
+          <span class="tip-icon tip-check" aria-hidden="true"><span class="mini-check"></span></span>
+          <span><strong>Tap the gifts you want.</strong> Up to 12. The sleigh has a weight limit.</span>
+        </li>
+        <li>
+          <span class="tip-icon tip-star" aria-hidden="true">★</span>
+          <span><strong>Star your top 5.</strong> They skip the line.</span>
+        </li>
+        <li>
+          <span class="tip-icon tip-kind" aria-hidden="true">?</span>
+          <span><strong>Want or Need?</strong> Be honest. Santa can tell.</span>
+        </li>
+        <li>
+          <span class="tip-icon tip-send" aria-hidden="true">✉︎</span>
+          <span><strong>Add your name and send it</strong> to the family on Messenger.</span>
+        </li>
+      </ol>
+      <label class="modal-check">
+        <input type="checkbox" id="tutorial-hide" />
+        <span class="box" aria-hidden="true"></span>
+        <span>Don't show this again</span>
+      </label>
+      <button type="button" class="btn btn-primary btn-block" id="tutorial-continue">Continue</button>
     </div>
   </div>
 

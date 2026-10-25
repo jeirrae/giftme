@@ -1079,21 +1079,42 @@
       go("list");
     });
 
-    const TIPS_KEY = "giftme:tips-hidden";
-    const setTips = (hidden) => {
-      $("#tips").hidden = hidden;
-      $("#tips-show").hidden = !hidden;
-      try {
-        localStorage.setItem(TIPS_KEY, hidden ? "1" : "");
-      } catch (_) {}
+    // Tutorial pop-up: shows on each visit until "Don't show this again" is ticked.
+    const TUTORIAL_KEY = "giftme:tutorial-hidden";
+    const modal = $("#tutorial");
+    let lastFocus = null;
+    const openTutorial = () => {
+      lastFocus = document.activeElement;
+      modal.hidden = false;
+      document.body.classList.add("modal-open");
+      setTimeout(() => $(".modal-card").focus(), 50);
     };
-    let tipsHidden = false;
+    const closeTutorial = () => {
+      if ($("#tutorial-hide").checked) {
+        try {
+          localStorage.setItem(TUTORIAL_KEY, "1");
+        } catch (_) {}
+      }
+      modal.hidden = true;
+      document.body.classList.remove("modal-open");
+      if (lastFocus) lastFocus.focus();
+    };
+    $("#tutorial-x").addEventListener("click", closeTutorial);
+    $("#tutorial-continue").addEventListener("click", closeTutorial);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.hidden) closeTutorial();
+    });
+    $("#tips-show").addEventListener("click", () => {
+      try {
+        $("#tutorial-hide").checked = localStorage.getItem(TUTORIAL_KEY) === "1";
+      } catch (_) {}
+      openTutorial();
+    });
+    let tutorialHidden = false;
     try {
-      tipsHidden = localStorage.getItem(TIPS_KEY) === "1";
+      tutorialHidden = localStorage.getItem(TUTORIAL_KEY) === "1";
     } catch (_) {}
-    setTips(tipsHidden);
-    $("#tips-close").addEventListener("click", () => setTips(true));
-    $("#tips-show").addEventListener("click", () => setTips(false));
+    if (!tutorialHidden && (location.hash.slice(1) || "list") === "list") openTutorial();
 
     window.addEventListener("hashchange", onHashChange);
     onHashChange();
