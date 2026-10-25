@@ -450,12 +450,22 @@
       box.dataset.key = key;
       box.innerHTML = list.map((v) =>
         `<button type="button" class="chip" data-size="${v}" aria-pressed="${isOn(v)}">${v}</button>`).join("");
-      // Start the row at the chosen size, or at a typical one.
-      const typical = { US: "7", UK: "6", EU: "39", Kids: "11C" }[state.shoeSys] || "S";
-      const target = $('.chip[aria-pressed="true"]', box) || $(`.chip[data-size="${type === "shoe" ? typical : "S"}"]`, box);
-      if (target) requestAnimationFrame(() => { box.scrollLeft = Math.max(0, target.offsetLeft - box.offsetLeft - 48); });
+      scrollSizes(li);
     }
     $(".size-saved", li).textContent = cur ? `Saved for all ${SIZE_TYPES[type].group}` : "";
+  }
+
+  // Center the saved size (or a typical one) so people see it was remembered.
+  function scrollSizes(li) {
+    const box = $(".size-chips", li);
+    if (!box) return;
+    requestAnimationFrame(() => {
+      if (!box.offsetParent) return; // still hidden; runs again when the box opens
+      const typical = { US: "7", UK: "6", EU: "39", Kids: "11C" }[state.shoeSys];
+      const target = $('.chip[aria-pressed="true"]', box) ||
+        $(`.chip[data-size="${itemDef(li.dataset.id).size === "shoe" ? typical : "S"}"]`, box);
+      if (target) box.scrollLeft = Math.max(0, target.offsetLeft - box.offsetLeft - (box.clientWidth - target.offsetWidth) / 2);
+    });
   }
 
   function syncItem(li) {
@@ -646,9 +656,15 @@
     const t = e.target;
 
     if (t.closest(".details-btn")) {
-      if (openDetails.has(id)) openDetails.delete(id);
-      else openDetails.add(id);
+      if (openDetails.has(id)) {
+        openDetails.delete(id);
+      } else {
+        openDetails.add(id);
+        // Show the tab the saved shoe size is on.
+        if (itemDef(id).size === "shoe" && state.sizes.shoe) state.shoeSys = state.sizes.shoe.sys;
+      }
       syncItem(li);
+      if (openDetails.has(id)) scrollSizes(li);
       return;
     }
 
@@ -675,6 +691,7 @@
       state.shoeSys = t.closest("button").dataset.sys;
       save();
       $$(".item.is-checked").forEach(syncItem);
+      scrollSizes(li);
       return;
     } else if (t.closest(".chip[data-size]")) {
       const type = itemDef(id).size;
