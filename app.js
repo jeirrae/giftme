@@ -402,7 +402,7 @@
 
   function syncSortToggle() {
     const btn = $("#sort-toggle");
-    btn.textContent = sortMode === "az" ? "A–Z" : "Most wanted";
+    btn.textContent = sortMode === "az" ? "A–Z" : "Default";
     btn.setAttribute("aria-label", `Sort gifts: ${btn.textContent}. Tap to change.`);
   }
 
