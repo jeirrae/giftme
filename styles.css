@@ -498,7 +498,7 @@ body.modal-open { overflow: hidden; }
 .done-footer { display: flex; justify-content: center; margin: 16px 0 48px; }
 
 /* Sort toggle above the categories */
-.list-tools { display: flex; align-items: center; justify-content: space-between; margin: 20px 4px 0; }
+.list-tools { display: flex; align-items: center; justify-content: flex-end; margin: 20px 4px 0; }
 .list-tools-label { font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .02em; }
 .sort-toggle {
   display: inline-flex; align-items: center; gap: 6px;
