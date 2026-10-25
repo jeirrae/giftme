@@ -10,6 +10,7 @@ A simple static site where each family member ticks off what they want or need f
 - Up to **8 gifts** plus **4 favorites** (☆). At the limit, the rest lock and Santa complains if you try for more
 - Add your own items under "Something else?"
 - Every visit starts a fresh list (good for shared phones); refreshing the same tab keeps your progress
+- "Copy my edit link" on the last page packs the whole list into a link, so it can be reopened and changed later
 - Duplicate gifts are blocked, and a simple word filter keeps it family-friendly
 - Christmas countdown and automatic dark mode
 - Inside Messenger, tapping Download also shows how to save by pressing and holding the image
@@ -19,7 +20,7 @@ The Inter font is bundled in `fonts/` (SIL Open Font License), so nothing loads 
 
 ## Editing the preset items
 
-All categories and items are in [`items.js`](items.js). Add, rename, or remove entries there. Each item needs a unique `id`; `styles` lists up to 5 suggestions and `size` (`shoe`, `top`, `bottom`) picks which shared size it uses.
+All categories and items are in [`items.js`](items.js). Add, rename, or remove entries there. Each item needs a unique `id`; `styles` lists up to 5 suggestions and `size` (`shoe`, `top`, `bottom`) picks which shared size it uses; `budget` (`small`, `mid`, `big`, on a category or an item) picks the price ranges.
 
 ## Running locally
 

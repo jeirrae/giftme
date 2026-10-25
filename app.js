@@ -49,15 +49,20 @@
   // picks: { [itemId]: { kind: "want" | "need" | "both", top, styles, other, budget, color, note } }
   // custom: [{ id, name }] — user-added items (shown under "Something else")
   // sizes: shared sizes by type, e.g. { shoe: { sys: "US", v: "8" }, top: "M" }
-  let state = load() || { picks: {}, custom: [], name: "", confirmed: false, sizes: {}, shoeSys: "US" };
 
   function load() {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const s = JSON.parse(raw);
+      return raw ? sanitize(JSON.parse(raw)) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Cleans a saved list (from this tab or an edit link) into the shape the app expects.
+  function sanitize(s) {
+    {
       const picks = {};
-      const BUDGET_IDS = ["10-100", "100-200", "200-500", "500-1000", "1000+"];
       Object.keys(s.picks || {}).forEach((id) => {
         const p = s.picks[id] || {};
         picks[id] = {
@@ -65,7 +70,7 @@
           top: !!p.top,
           styles: (Array.isArray(p.styles) ? p.styles : []).map(String).slice(0, 5),
           other: String(p.other || "").slice(0, 40),
-          budget: BUDGET_IDS.includes(p.budget) ? p.budget : "",
+          budget: /^\d+(-\d+|\+)$/.test(p.budget || "") ? p.budget : "",
           colors: (Array.isArray(p.colors) ? p.colors : p.color ? [p.color] : []).map(String).slice(0, 11),
           note: String(p.note || "").slice(0, 60),
         };
@@ -84,12 +89,59 @@
         name: String(s.name || "").slice(0, 30),
         confirmed: !!s.confirmed,
         sizes,
-        shoeSys: ["US", "UK", "EU"].includes(s.shoeSys) ? s.shoeSys : "US",
+        shoeSys: ["US", "UK", "EU", "Kids"].includes(s.shoeSys) ? s.shoeSys : "US",
       };
-    } catch (_) {
-      return null;
     }
   }
+
+  // ---------- Edit link ----------
+  // The whole list is packed into the link itself, so it can be reopened later.
+
+  function encodeList() {
+    const picks = {};
+    Object.keys(state.picks).forEach((id) => {
+      if (!itemName(id)) return;
+      const p = {};
+      Object.entries(state.picks[id]).forEach(([k, v]) => {
+        if (Array.isArray(v) ? v.length : v) p[k] = v;
+      });
+      picks[id] = p;
+    });
+    const json = JSON.stringify({ picks, custom: state.custom, name: state.name, sizes: state.sizes, shoeSys: state.shoeSys });
+    return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function decodeList(text) {
+    const b64 = text.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+  }
+
+  function editLink() {
+    return `${location.origin}${location.pathname}?list=${encodeList()}`;
+  }
+
+  // Opening an edit link restores that list, then tidies the address bar.
+  let openedFromLink = false;
+  (function importFromLink() {
+    let params;
+    try {
+      params = new URLSearchParams(location.search);
+    } catch (_) {
+      return;
+    }
+    if (!params.has("list")) return;
+    try {
+      const restored = sanitize(decodeList(params.get("list")));
+      restored.confirmed = false;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+      openedFromLink = true;
+    } catch (_) {
+      /* a broken link just starts a fresh list */
+    }
+    history.replaceState(null, "", location.pathname + "#list");
+  })();
+
+  let state = load() || { picks: {}, custom: [], name: "", confirmed: false, sizes: {}, shoeSys: "US" };
 
   function save() {
     try {
@@ -157,13 +209,18 @@
 
   // ---------- Step 1: checklist ----------
 
-  const BUDGETS = [
-    { id: "10-100", label: "₱10–100" },
-    { id: "100-200", label: "₱100–200" },
-    { id: "200-500", label: "₱200–500" },
-    { id: "500-1000", label: "₱500–1,000" },
-    { id: "1000+", label: "₱1,000+" },
-  ];
+  // Price ranges by kind of gift; items.js picks "small", "mid" or "big".
+  const BUDGET_SETS = {
+    small: ["50-100", "100-200", "200-500", "500-1000", "1000+"],
+    mid: ["200-500", "500-1000", "1000-2000", "2000-5000", "5000+"],
+    big: ["1000-3000", "3000-5000", "5000-10000", "10000-20000", "20000+"],
+  };
+
+  function budgetsFor(id) {
+    const i = itemIndex.get(id);
+    const tier = (i && (i.def.budget || i.category.budget)) || "mid";
+    return BUDGET_SETS[tier] || BUDGET_SETS.mid;
+  }
   const COLORS = [
     { id: "black", name: "Black", hex: "#1d1d1f" },
     { id: "white", name: "White", hex: "#ffffff" },
@@ -185,7 +242,15 @@
   const CLOTHES_SIZES = ["Kids 4", "Kids 6", "Kids 8", "Kids 10", "Kids 12", "XS", "S", "M", "L", "XL", "2XL", "3XL"];
   // Sizes are shared by type: set a shoe size once and every footwear item uses it.
   const SIZE_TYPES = {
-    shoe: { group: "footwear", systems: { US: range(1, 13, 0.5), UK: range(1, 12, 0.5), EU: range(30, 47, 1) } },
+    shoe: {
+      group: "footwear",
+      systems: {
+        US: range(4, 13, 0.5),
+        UK: range(3, 12, 0.5),
+        EU: range(35, 47, 1),
+        Kids: range(4, 13, 1).map((v) => v + "C").concat(range(1, 7, 1).map((v) => v + "Y")),
+      },
+    },
     top: { group: "tops", list: CLOTHES_SIZES },
     bottom: { group: "bottoms", list: CLOTHES_SIZES },
   };
@@ -202,7 +267,8 @@
   function sizeText(type) {
     const v = state.sizes[type];
     if (!v) return "";
-    return type === "shoe" ? `${v.sys} ${v.v}` : `Size ${v}`;
+    if (type !== "shoe") return `Size ${v}`;
+    return v.sys === "Kids" ? `Kids ${v.v}` : `${v.sys} ${v.v}`;
   }
 
   // The small "Running • US 8 • Black" line used on the list, review and image.
@@ -222,9 +288,13 @@
     return COLORS.filter((c) => (pick.colors || []).includes(c.id)).map((c) => c.name).join(" / ");
   }
 
+  // "1000-2000" → "₱1,000–2,000", "5000+" → "₱5,000+".
   function budgetLabel(id) {
-    const b = BUDGETS.find((x) => x.id === id);
-    return b ? b.label : "";
+    if (!id) return "";
+    const n = (v) => Number(v).toLocaleString("en-PH");
+    const m = String(id).match(/^(\d+)(?:-(\d+)|(\+))$/);
+    if (!m) return "";
+    return m[3] ? `₱${n(m[1])}+` : `₱${n(m[1])}–${n(m[2])}`;
   }
 
   const openDetails = new Set(); // items whose size & color box is open
@@ -291,7 +361,7 @@
           ${styles}
           <div class="opt">
             <p class="opt-label">Budget</p>
-            <div class="chips">${BUDGETS.map((b) => chip(`data-budget="${b.id}"`, b.label)).join("")}</div>
+            <div class="chips">${budgetsFor(id).map((b) => chip(`data-budget="${b}"`, budgetLabel(b))).join("")}</div>
           </div>
         </div>
       </li>`;
@@ -381,7 +451,7 @@
       box.innerHTML = list.map((v) =>
         `<button type="button" class="chip" data-size="${v}" aria-pressed="${isOn(v)}">${v}</button>`).join("");
       // Start the row at the chosen size, or at a typical one.
-      const typical = { US: "7", UK: "6", EU: "39" }[state.shoeSys] || "S";
+      const typical = { US: "7", UK: "6", EU: "39", Kids: "11C" }[state.shoeSys] || "S";
       const target = $('.chip[aria-pressed="true"]', box) || $(`.chip[data-size="${type === "shoe" ? typical : "S"}"]`, box);
       if (target) requestAnimationFrame(() => { box.scrollLeft = Math.max(0, target.offsetLeft - box.offsetLeft - 48); });
     }
@@ -853,8 +923,11 @@
     }
   }
 
+  // "Mika's Christmas Wishlist.png", so images on a shared phone are easy to tell apart.
   function fileName() {
-    return "My Christmas Wishlist.png";
+    const n = state.name.trim().replace(/[\\/:*?"<>|]+/g, "").trim();
+    if (!n) return "My Christmas Wishlist.png";
+    return `${n}${/s$/i.test(n) ? "'" : "'s"} Christmas Wishlist.png`;
   }
 
   function setupShareUI(blob) {
@@ -1562,7 +1635,7 @@
       go("list");
     });
 
-    // Tutorial pop-up: shows on each visit until "Don't show this again" is ticked.
+    // Tutorial pop-up: shows once per device; "How it works" opens it again.
     const TUTORIAL_KEY = "giftme:tutorial-hidden";
     const modal = $("#tutorial");
     let lastFocus = null;
@@ -1573,11 +1646,6 @@
       setTimeout(() => $(".modal-card").focus(), 50);
     };
     const closeTutorial = () => {
-      if ($("#tutorial-hide").checked) {
-        try {
-          localStorage.setItem(TUTORIAL_KEY, "1");
-        } catch (_) {}
-      }
       modal.hidden = true;
       document.body.classList.remove("modal-open");
       if (lastFocus) lastFocus.focus();
@@ -1587,17 +1655,31 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !modal.hidden) closeTutorial();
     });
-    $("#tips-show").addEventListener("click", () => {
-      try {
-        $("#tutorial-hide").checked = localStorage.getItem(TUTORIAL_KEY) === "1";
-      } catch (_) {}
-      openTutorial();
-    });
+    $("#tips-show").addEventListener("click", openTutorial);
     let tutorialHidden = false;
     try {
       tutorialHidden = localStorage.getItem(TUTORIAL_KEY) === "1";
     } catch (_) {}
-    if (!tutorialHidden && (location.hash.slice(1) || "list") === "list") openTutorial();
+    if (!tutorialHidden && !openedFromLink && (location.hash.slice(1) || "list") === "list") {
+      openTutorial();
+      try {
+        localStorage.setItem(TUTORIAL_KEY, "1");
+      } catch (_) {}
+    }
+
+    // Edit link on the last page.
+    $("#edit-link-btn").addEventListener("click", async () => {
+      const url = editLink();
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ emoji: "🔗", title: "Edit link copied", text: "Keep it somewhere safe. Open it later to change your list." }, 3500);
+      } catch (_) {
+        window.prompt("Copy this link. Open it later to change your list:", url);
+      }
+    });
+    if (openedFromLink) {
+      setTimeout(() => toast({ emoji: "🎁", title: "Your list is back", text: "Make your changes, then tap Next." }, 3500), 300);
+    }
 
     window.addEventListener("hashchange", onHashChange);
     onHashChange();

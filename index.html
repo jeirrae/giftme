@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=202610251440" />
+  <link rel="stylesheet" href="styles.css?v=202610251500" />
 </head>
 <body>
   <header class="topbar">
@@ -84,6 +84,8 @@
         <a class="btn btn-plain btn-block" id="messenger-link" href="https://www.messenger.com/" target="_blank" rel="noopener" hidden>Open Messenger</a>
         <p class="hint" id="share-hint"></p>
         <button type="button" class="btn btn-plain btn-block" data-go="list">Edit my list</button>
+        <button type="button" class="btn btn-plain btn-block" id="edit-link-btn">Copy my edit link</button>
+        <p class="hint">Save the link to change your list later.</p>
         <button type="button" class="link" id="reset-btn">Start a new list</button>
       </div>
     </section>
@@ -141,11 +143,6 @@
           </span>
         </li>
       </ol>
-      <label class="modal-check">
-        <input type="checkbox" id="tutorial-hide" />
-        <span class="box" aria-hidden="true"></span>
-        <span>Don't show this again</span>
-      </label>
       <button type="button" class="btn btn-primary btn-block" id="tutorial-continue">Continue</button>
     </div>
   </div>
@@ -177,7 +174,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="items.js?v=202610251440"></script>
-  <script src="app.js?v=202610251440"></script>
+  <script src="items.js?v=202610251500"></script>
+  <script src="app.js?v=202610251500"></script>
 </body>
 </html>
