@@ -3,7 +3,6 @@
 
   const MAX_TOP = 5;
   const MAX_ITEMS = 12; // gifts that aren't favorites
-  const MAX_PRICE = 10000;
 
   const KINDS = ["want", "need", "both"];
   const KIND_LABEL = { want: "Want", need: "Need", both: "Want & Need" };
@@ -47,9 +46,10 @@
     localStorage.removeItem(STORAGE_KEY); // lists saved by older versions
   } catch (_) {}
 
-  // picks: { [itemId]: { kind: "want" | "need" | "both", note, price, top } }
-  // custom: [{ id, name }] — user-added items (always shown in "Something else?")
-  let state = load() || { picks: {}, custom: [], name: "", confirmed: false };
+  // picks: { [itemId]: { kind: "want" | "need" | "both", top, styles, other, budget, color, note } }
+  // custom: [{ id, name }] — user-added items (shown under "Something else")
+  // sizes: shared sizes by type, e.g. { shoe: { sys: "US", v: "8" }, top: "M" }
+  let state = load() || { picks: {}, custom: [], name: "", confirmed: false, sizes: {}, shoeSys: "US" };
 
   function load() {
     try {
@@ -57,15 +57,24 @@
       if (!raw) return null;
       const s = JSON.parse(raw);
       const picks = {};
+      const BUDGET_IDS = ["10-100", "100-200", "200-500", "500-1000", "1000+"];
       Object.keys(s.picks || {}).forEach((id) => {
         const p = s.picks[id] || {};
-        const price = String(p.price || "").replace(/\D/g, "");
         picks[id] = {
           kind: kindOf(p.kind),
-          note: String(p.note || "").slice(0, 80),
-          price: price && Number(price) > MAX_PRICE ? String(MAX_PRICE) : price,
           top: !!p.top,
+          styles: (Array.isArray(p.styles) ? p.styles : []).map(String).slice(0, 5),
+          other: String(p.other || "").slice(0, 40),
+          budget: BUDGET_IDS.includes(p.budget) ? p.budget : "",
+          color: String(p.color || "").slice(0, 12),
+          note: String(p.note || "").slice(0, 60),
         };
+      });
+      const sizes = {};
+      const sz = s.sizes || {};
+      if (sz.shoe && sz.shoe.sys && sz.shoe.v) sizes.shoe = { sys: String(sz.shoe.sys), v: String(sz.shoe.v) };
+      ["top", "bottom"].forEach((k) => {
+        if (typeof sz[k] === "string") sizes[k] = sz[k];
       });
       return {
         picks,
@@ -74,6 +83,8 @@
           .map((c) => ({ id: String(c.id), name: String(c.name).slice(0, 60) })),
         name: String(s.name || "").slice(0, 30),
         confirmed: !!s.confirmed,
+        sizes,
+        shoeSys: ["US", "UK", "EU"].includes(s.shoeSys) ? s.shoeSys : "US",
       };
     } catch (_) {
       return null;
@@ -96,7 +107,7 @@
 
   const itemIndex = new Map(); // id -> { name, category }
   CATEGORIES.forEach((cat) =>
-    cat.items.forEach((it) => itemIndex.set(it.id, { name: it.name, category: cat }))
+    cat.items.forEach((it) => itemIndex.set(it.id, { name: it.name, category: cat, def: it }))
   );
   const CUSTOM_CATEGORY = { id: "custom", name: "Something else", emoji: "✨" };
 
@@ -120,7 +131,7 @@
   }
 
   function entry(id, name) {
-    return Object.assign({ id, name }, state.picks[id]);
+    return Object.assign({ id, name }, state.picks[id], { meta: metaParts(id, state.picks[id]) });
   }
 
   function pickCount() {
@@ -135,11 +146,6 @@
     return Object.keys(state.picks).filter((id) => state.picks[id].top && itemName(id)).length;
   }
 
-  function formatPrice(p) {
-    const n = Number(p);
-    return p && n > 0 ? "₱" + n.toLocaleString("en-PH") : "";
-  }
-
   function christmasYear(now = new Date()) {
     const y = now.getFullYear();
     return now.getMonth() === 11 && now.getDate() > 25 ? y + 1 : y;
@@ -151,53 +157,174 @@
 
   // ---------- Step 1: checklist ----------
 
+  const BUDGETS = [
+    { id: "10-100", label: "₱10–100" },
+    { id: "100-200", label: "₱100–200" },
+    { id: "200-500", label: "₱200–500" },
+    { id: "500-1000", label: "₱500–1,000" },
+    { id: "1000+", label: "₱1,000+" },
+  ];
+  const COLORS = [
+    { id: "black", name: "Black", hex: "#1d1d1f" },
+    { id: "white", name: "White", hex: "#ffffff" },
+    { id: "gray", name: "Gray", hex: "#9a9aa1" },
+    { id: "red", name: "Red", hex: "#d12a3a" },
+    { id: "pink", name: "Pink", hex: "#f28db5" },
+    { id: "purple", name: "Purple", hex: "#8a5cd6" },
+    { id: "blue", name: "Blue", hex: "#2f6fd6" },
+    { id: "green", name: "Green", hex: "#2f9a5c" },
+    { id: "yellow", name: "Yellow", hex: "#f2c230" },
+    { id: "brown", name: "Brown", hex: "#8a5a3c" },
+    { id: "beige", name: "Beige", hex: "#e8d5b5" },
+  ];
+  const range = (a, b, step) => {
+    const out = [];
+    for (let v = a; v <= b + 1e-9; v += step) out.push(String(Math.round(v * 10) / 10));
+    return out;
+  };
+  const CLOTHES_SIZES = ["Kids 4", "Kids 6", "Kids 8", "Kids 10", "Kids 12", "XS", "S", "M", "L", "XL", "2XL", "3XL"];
+  // Sizes are shared by type: set a shoe size once and every footwear item uses it.
+  const SIZE_TYPES = {
+    shoe: { group: "footwear", systems: { US: range(1, 13, 0.5), UK: range(1, 12, 0.5), EU: range(30, 47, 1) } },
+    top: { group: "tops", list: CLOTHES_SIZES },
+    bottom: { group: "bottoms", list: CLOTHES_SIZES },
+  };
+
+  function newPick(extra) {
+    return Object.assign({ kind: "want", top: false, styles: [], other: "", budget: "", color: "", note: "" }, extra);
+  }
+
+  function itemDef(id) {
+    const i = itemIndex.get(id);
+    return i ? i.def : { styles: [], size: null };
+  }
+
+  function sizeText(type) {
+    const v = state.sizes[type];
+    if (!v) return "";
+    return type === "shoe" ? `${v.sys} ${v.v}` : `Size ${v}`;
+  }
+
+  // The small "Running • US 8 • Black" line used on the list, review and image.
+  function metaParts(id, pick) {
+    const def = itemDef(id);
+    const parts = (pick.styles || []).slice();
+    if (pick.other && pick.other.trim()) parts.push(pick.other.trim());
+    if (def.size && sizeText(def.size)) parts.push(sizeText(def.size));
+    const color = COLORS.find((c) => c.id === pick.color);
+    if (color) parts.push(color.name);
+    if (pick.note && pick.note.trim()) parts.push(pick.note.trim());
+    return parts;
+  }
+
+  function budgetLabel(id) {
+    const b = BUDGETS.find((x) => x.id === id);
+    return b ? b.label : "";
+  }
+
+  const openDetails = new Set(); // items whose size & color box is open
+  const openOther = new Set(); // items showing the "Other" style box
+  let openCat = null;
+
+  function chip(attrs, label) {
+    return `<button type="button" class="chip" ${attrs} aria-pressed="false">${escapeHTML(label)}</button>`;
+  }
+
   function itemHTML(id, name, removable) {
+    const def = itemDef(id);
+    const styles = def.styles && def.styles.length
+      ? `<div class="opt">
+            <p class="opt-label">Style <span>Pick any</span></p>
+            <div class="chips">
+              ${def.styles.map((st) => chip(`data-style="${escapeHTML(st)}"`, st)).join("")}
+              <button type="button" class="chip chip-other" aria-pressed="false">+ Other</button>
+            </div>
+            <input type="text" class="other-input" maxlength="40" placeholder="Type the style you want" aria-label="Other style" hidden />
+          </div>`
+      : "";
+    const size = def.size
+      ? `<div class="opt">
+            <p class="opt-label">Size <span class="size-saved"></span></p>
+            ${def.size === "shoe"
+              ? `<div class="mini-seg" role="group" aria-label="Size system">${Object.keys(SIZE_TYPES.shoe.systems)
+                  .map((sys) => `<button type="button" data-sys="${sys}" aria-pressed="false">${sys}</button>`).join("")}</div>`
+              : ""}
+            <div class="chips scroll size-chips"></div>
+          </div>`
+      : "";
     return `
       <li class="item" data-id="${id}">
         <div class="item-row">
           <label class="check">
             <input type="checkbox" />
             <span class="box" aria-hidden="true"></span>
-            <span class="item-name"></span>
+            <span class="item-text"><span class="item-name"></span><span class="item-meta"></span></span>
           </label>
+          <button type="button" class="details-btn" aria-expanded="false">${def.size ? "Size & color" : "Color & note"}</button>
           <button type="button" class="star" aria-pressed="false" aria-label="Favorite">☆</button>
           ${removable ? `<button type="button" class="icon-btn remove" aria-label="Remove item">×</button>` : ""}
         </div>
         <div class="details">
+          <div class="more" hidden>
+            ${size}
+            <div class="opt">
+              <p class="opt-label">Color <span class="color-name"></span></p>
+              <div class="swatches">${COLORS.map((c) =>
+                `<button type="button" class="swatch" data-color="${c.id}" style="--c:${c.hex}" aria-label="${c.name}" aria-pressed="false"></button>`).join("")}</div>
+            </div>
+            <div class="opt">
+              <p class="opt-label">Note</p>
+              <input type="text" class="note" maxlength="60" placeholder="Anything else? e.g. with my name on it" aria-label="Note" />
+            </div>
+          </div>
           <div class="seg" role="group" aria-label="Want, need, or both">
             <button type="button" data-kind="want" aria-pressed="true">Want</button>
             <button type="button" data-kind="need" aria-pressed="false">Need</button>
             <button type="button" data-kind="both" aria-pressed="false">Both</button>
           </div>
           <p class="kind-hint"></p>
-          <div class="detail-fields">
-            <input type="text" class="note" maxlength="80" placeholder="Note (size, color…)" aria-label="Note" />
-            <label class="price-field">
-              <span>₱</span>
-              <input type="text" class="price" inputmode="numeric" maxlength="5" placeholder="Price" aria-label="Price in pesos" />
-            </label>
+          ${styles}
+          <div class="opt">
+            <p class="opt-label">Budget</p>
+            <div class="chips">${BUDGETS.map((b) => chip(`data-budget="${b.id}"`, b.label)).join("")}</div>
           </div>
         </div>
       </li>`;
   }
 
+  function catHTML(id, name, body) {
+    return `
+      <section class="group" data-cat="${id}">
+        <button type="button" class="cat-head" aria-expanded="false">
+          <span class="cat-name">${escapeHTML(name)}</span>
+          <span class="cat-count"></span>
+          <span class="chev" aria-hidden="true"></span>
+        </button>
+        <div class="cat-body" hidden>${body}</div>
+      </section>`;
+  }
+
   function renderCategories() {
     const host = $("#categories");
-    host.innerHTML = CATEGORIES.map(
-      (cat) => `
-      <section class="group" data-cat="${cat.id}">
-        <h2 class="group-title">${escapeHTML(cat.name)} <span class="cat-count"></span></h2>
-        <ul class="card items">${cat.items.map((it) => itemHTML(it.id, it.name)).join("")}</ul>
-      </section>`
-    ).join("");
+    host.innerHTML = CATEGORIES.map((cat) =>
+      catHTML(cat.id, cat.name, `<ul class="items">${cat.items.map((it) => itemHTML(it.id, it.name)).join("")}</ul>`)
+    ).join("") + catHTML("custom", "Something else", `
+        <form id="custom-form" class="custom-form" autocomplete="off">
+          <label class="sr-only" for="custom-input">Add your own item</label>
+          <input id="custom-input" type="text" maxlength="60" placeholder="Add your own gift" />
+          <button type="submit" class="btn btn-soft">Add</button>
+        </form>
+        <ul class="items" id="custom-items"></ul>`);
     // Set names via textContent so preset/custom text is never parsed as HTML.
     CATEGORIES.forEach((cat) =>
       cat.items.forEach((it) => {
         $(`.item[data-id="${it.id}"] .item-name`, host).textContent = it.name;
       })
     );
+    $("#custom-form").addEventListener("submit", onCustomSubmit);
     renderCustom();
     $$(".item").forEach(syncItem);
+    syncCats();
     updateTally();
   }
 
@@ -210,8 +337,55 @@
     $$(".item", list).forEach(syncItem);
   }
 
+  function syncCats() {
+    $$(".group[data-cat]").forEach((g) => {
+      const open = g.dataset.cat === openCat;
+      $(".cat-head", g).setAttribute("aria-expanded", String(open));
+      $(".cat-body", g).hidden = !open;
+      g.classList.toggle("is-open", open);
+    });
+  }
+
+  function toggleCat(id) {
+    openCat = openCat === id ? null : id;
+    syncCats();
+    if (openCat) {
+      const head = $(`.group[data-cat="${openCat}"] .cat-head`);
+      head.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }
+
+  function renderSizeChips(li, type) {
+    const box = $(".size-chips", li);
+    if (!box) return;
+    const cur = state.sizes[type];
+    let list;
+    let isOn;
+    if (type === "shoe") {
+      const sys = state.shoeSys;
+      $$(".mini-seg button", li).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sys === sys)));
+      list = SIZE_TYPES.shoe.systems[sys];
+      isOn = (v) => !!cur && cur.sys === sys && cur.v === v;
+    } else {
+      list = SIZE_TYPES[type].list;
+      isOn = (v) => cur === v;
+    }
+    const key = list.join("|") + "#" + JSON.stringify(cur);
+    if (box.dataset.key !== key) {
+      box.dataset.key = key;
+      box.innerHTML = list.map((v) =>
+        `<button type="button" class="chip" data-size="${v}" aria-pressed="${isOn(v)}">${v}</button>`).join("");
+      // Start the row at the chosen size, or at a typical one.
+      const typical = { US: "7", UK: "6", EU: "39" }[state.shoeSys] || "S";
+      const target = $('.chip[aria-pressed="true"]', box) || $(`.chip[data-size="${type === "shoe" ? typical : "S"}"]`, box);
+      if (target) requestAnimationFrame(() => { box.scrollLeft = Math.max(0, target.offsetLeft - box.offsetLeft - 48); });
+    }
+    $(".size-saved", li).textContent = cur ? `Saved for all ${SIZE_TYPES[type].group}` : "";
+  }
+
   function syncItem(li) {
-    const pick = state.picks[li.dataset.id];
+    const id = li.dataset.id;
+    const pick = state.picks[id];
     const checked = !!pick;
     li.classList.toggle("is-checked", checked);
     $(".check input", li).checked = checked;
@@ -219,16 +393,48 @@
     const isTop = !!(pick && pick.top);
     star.setAttribute("aria-pressed", String(isTop));
     star.textContent = isTop ? "★" : "☆";
-    if (pick) {
-      $$(".seg button", li).forEach((b) =>
-        b.setAttribute("aria-pressed", String(b.dataset.kind === pick.kind))
-      );
-      $(".kind-hint", li).textContent = KIND_HINT[kindOf(pick.kind)];
-      const note = $(".note", li);
-      const price = $(".price", li);
-      if (document.activeElement !== note) note.value = pick.note || "";
-      if (document.activeElement !== price) price.value = pick.price || "";
+    const detailsOpen = checked && openDetails.has(id);
+    $(".details-btn", li).setAttribute("aria-expanded", String(detailsOpen));
+    $(".more", li).hidden = !detailsOpen;
+    if (!pick) {
+      $(".item-meta", li).textContent = "";
+      return;
     }
+    $$(".seg button", li).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.kind === pick.kind)));
+    $(".kind-hint", li).textContent = KIND_HINT[kindOf(pick.kind)];
+    $$(".chip[data-style]", li).forEach((b) =>
+      b.setAttribute("aria-pressed", String(pick.styles.includes(b.dataset.style))));
+    const other = $(".other-input", li);
+    if (other) {
+      const showOther = openOther.has(id) || !!pick.other;
+      $(".chip-other", li).setAttribute("aria-pressed", String(showOther));
+      other.hidden = !showOther;
+      if (document.activeElement !== other) other.value = pick.other || "";
+    }
+    $$(".chip[data-budget]", li).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.budget === pick.budget)));
+    const def = itemDef(id);
+    if (def.size) renderSizeChips(li, def.size);
+    $$(".swatch", li).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.color === pick.color)));
+    const color = COLORS.find((c) => c.id === pick.color);
+    $(".color-name", li).textContent = color ? color.name : "";
+    const note = $(".note", li);
+    if (document.activeElement !== note) note.value = pick.note || "";
+    updateMeta(li);
+  }
+
+  // Under the name, show what's tucked inside the closed Size & color box.
+  function updateMeta(li) {
+    const id = li.dataset.id;
+    const pick = state.picks[id];
+    const parts = [];
+    if (pick && !openDetails.has(id)) {
+      const def = itemDef(id);
+      if (def.size && sizeText(def.size)) parts.push(sizeText(def.size));
+      const color = COLORS.find((c) => c.id === pick.color);
+      if (color) parts.push(color.name);
+      if (pick.note && pick.note.trim()) parts.push(pick.note.trim());
+    }
+    $(".item-meta", li).textContent = parts.join(" • ");
   }
 
   function updateTally() {
@@ -260,6 +466,7 @@
     $$(".group[data-cat]").forEach((group) => {
       const c = $$(".item.is-checked", group).length;
       $(".cat-count", group).textContent = c ? `${c} picked` : "";
+      group.classList.toggle("has-picks", c > 0);
     });
   }
 
@@ -325,12 +532,17 @@
   }
 
   function onListClick(e) {
+    const head = e.target.closest(".cat-head");
+    if (head) {
+      toggleCat(head.closest(".group").dataset.cat);
+      return;
+    }
     const li = e.target.closest(".item");
     if (!li) return;
     const id = li.dataset.id;
+    const pick = state.picks[id];
 
     if (e.target.closest(".star")) {
-      const pick = state.picks[id];
       if (pick && pick.top) {
         if (regularCount() >= MAX_ITEMS) {
           warnLimit("gifts");
@@ -341,16 +553,8 @@
         warnLimit("stars");
         return;
       } else {
-        state.picks[id] = Object.assign({ kind: "want", note: "", price: "" }, pick, { top: true });
+        state.picks[id] = pick ? Object.assign(pick, { top: true }) : newPick({ top: true });
       }
-      syncItem(li);
-      changed();
-      return;
-    }
-
-    const seg = e.target.closest(".seg button");
-    if (seg && state.picks[id]) {
-      state.picks[id].kind = seg.dataset.kind;
       syncItem(li);
       changed();
       return;
@@ -361,7 +565,67 @@
       delete state.picks[id];
       li.remove();
       changed();
+      return;
     }
+
+    if (!pick) return;
+    const t = e.target;
+
+    if (t.closest(".details-btn")) {
+      if (openDetails.has(id)) openDetails.delete(id);
+      else openDetails.add(id);
+      syncItem(li);
+      return;
+    }
+
+    const seg = t.closest(".seg button");
+    if (seg) {
+      pick.kind = seg.dataset.kind;
+    } else if (t.closest(".chip[data-style]")) {
+      const st = t.closest(".chip").dataset.style;
+      pick.styles = pick.styles.includes(st) ? pick.styles.filter((x) => x !== st) : pick.styles.concat(st);
+    } else if (t.closest(".chip-other")) {
+      if (openOther.has(id) || pick.other) {
+        openOther.delete(id);
+        pick.other = "";
+      } else {
+        openOther.add(id);
+        syncItem(li);
+        $(".other-input", li).focus();
+        return;
+      }
+    } else if (t.closest(".chip[data-budget]")) {
+      const b = t.closest(".chip").dataset.budget;
+      pick.budget = pick.budget === b ? "" : b;
+    } else if (t.closest(".mini-seg button")) {
+      state.shoeSys = t.closest("button").dataset.sys;
+      save();
+      $$(".item.is-checked").forEach(syncItem);
+      return;
+    } else if (t.closest(".chip[data-size]")) {
+      const type = itemDef(id).size;
+      const v = t.closest(".chip").dataset.size;
+      if (type === "shoe") {
+        const cur = state.sizes.shoe;
+        if (cur && cur.sys === state.shoeSys && cur.v === v) delete state.sizes.shoe;
+        else state.sizes.shoe = { sys: state.shoeSys, v };
+      } else if (state.sizes[type] === v) {
+        delete state.sizes[type];
+      } else {
+        state.sizes[type] = v;
+      }
+      // Every item of this size type shows the shared size.
+      $$(".item.is-checked").forEach(syncItem);
+      changed();
+      return;
+    } else if (t.closest(".swatch")) {
+      const c = t.closest(".swatch").dataset.color;
+      pick.color = pick.color === c ? "" : c;
+    } else {
+      return;
+    }
+    syncItem(li);
+    changed();
   }
 
   function onListChange(e) {
@@ -374,9 +638,11 @@
         warnLimit("gifts");
         return;
       }
-      state.picks[id] = state.picks[id] || { kind: "want", note: "", price: "", top: false };
+      state.picks[id] = state.picks[id] || newPick();
     } else {
       delete state.picks[id];
+      openDetails.delete(id);
+      openOther.delete(id);
     }
     syncItem(li);
     changed();
@@ -386,19 +652,10 @@
     const li = e.target.closest(".item");
     if (!li || !state.picks[li.dataset.id]) return;
     const pick = state.picks[li.dataset.id];
-    if (e.target.matches(".note")) {
-      pick.note = e.target.value;
-    } else if (e.target.matches(".price")) {
-      let digits = e.target.value.replace(/\D/g, "").replace(/^0+/, "");
-      if (Number(digits) > MAX_PRICE) {
-        digits = String(MAX_PRICE);
-        toast({ emoji: "💸", title: "Whoa, big spender!", text: "Prices top out at ₱10,000." });
-      }
-      if (digits !== e.target.value) e.target.value = digits;
-      pick.price = digits;
-    } else {
-      return;
-    }
+    if (e.target.matches(".note")) pick.note = e.target.value;
+    else if (e.target.matches(".other-input")) pick.other = e.target.value;
+    else return;
+    updateMeta(li);
     changed();
   }
 
@@ -422,7 +679,7 @@
     }
     const id = "custom-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     state.custom.push({ id, name });
-    state.picks[id] = { kind: "want", note: "", price: "", top: false };
+    state.picks[id] = newPick();
     input.value = "";
     renderCustom();
     changed();
@@ -451,7 +708,8 @@
 
   // Before leaving the list, make sure no note has words that need washing.
   function rudeNoteItem() {
-    return Object.keys(state.picks).find((id) => itemName(id) && isRude(state.picks[id].note || ""));
+    return Object.keys(state.picks).find((id) =>
+      itemName(id) && (isRude(state.picks[id].note || "") || isRude(state.picks[id].other || "")));
   }
 
   // Re-checked before every step past the list, so a list edited by hand
@@ -544,9 +802,8 @@
           <span class="r-sub">${kindLabelHTML(it.kind)}<span class="r-note"></span></span></span>
           <span class="r-price"></span>`;
         $(".r-name", li).textContent = it.name;
-        const note = (it.note || "").trim();
-        $(".r-note", li).textContent = note ? ` · ${note}` : "";
-        $(".r-price", li).textContent = formatPrice(it.price);
+        $(".r-note", li).textContent = it.meta.length ? ` · ${it.meta.join(" • ")}` : "";
+        $(".r-price", li).textContent = budgetLabel(it.budget);
         ul.appendChild(li);
       });
       section.append(h, ul);
@@ -965,8 +1222,8 @@
   function measureRow(mctx, it, w, s, theme, opt) {
     const nameSize = (opt.big ? 30 : 25) * s;
     const nameLH = nameSize * 1.25;
-    const noteSize = (opt.big ? 21 : 19) * s;
-    const noteLH = noteSize * 1.45;
+    const metaSize = (opt.big ? 17 : 15) * s; // the tiny "Running • US 8" line
+    const metaLH = metaSize * 1.45;
     const padY = (opt.big ? 15 : 12) * s;
     const pillSize = PILL_SIZE * s;
     const pillH = PILL_H * s;
@@ -975,15 +1232,16 @@
     setFont(mctx, 600, pillSize);
     const kind = kindOf(it.kind);
     const pillW = opt.tag ? kindPillWidth(mctx, kind, pillSize) : 0;
-    const price = formatPrice(it.price);
+    const price = budgetLabel(it.budget);
     setFont(mctx, 500, priceSize);
     const priceW = price ? mctx.measureText(price).width : 0;
     const rightW = (pillW ? pillW + 14 * s : 0) + (priceW ? priceW + 16 * s : 0);
 
     setFont(mctx, opt.big ? 600 : 500, nameSize);
-    const nameLines = wrap(mctx, it.name, Math.max(40, w - rightW), 2);
-    const note = (it.note || "").trim();
-    const h = padY * 2 + nameLines.length * nameLH + (note ? noteLH : 0);
+    const nameLines = wrapFirst(mctx, it.name, Math.max(40, w - rightW), w, 2);
+    setFont(mctx, 400, metaSize);
+    const metaLines = it.meta && it.meta.length ? wrap(mctx, it.meta.join("  •  "), w, 2) : [];
+    const h = padY * 2 + nameLines.length * nameLH + (metaLines.length ? 4 * s + metaLines.length * metaLH : 0);
 
     return {
       h,
@@ -1010,10 +1268,11 @@
           ctx.textBaseline = "alphabetic";
         }
 
-        if (note) {
-          setFont(ctx, 400, noteSize);
+        if (metaLines.length) {
+          setFont(ctx, 400, metaSize);
           ctx.fillStyle = theme.muted;
-          ctx.fillText(fitText(ctx, note, w), x, base + (nameLines.length - 1) * nameLH + noteLH);
+          const my = base + (nameLines.length - 1) * nameLH + 4 * s + metaLH;
+          metaLines.forEach((ln, i) => ctx.fillText(ln, x, my + i * metaLH));
         }
       },
     };
@@ -1121,6 +1380,18 @@
     return t.trimEnd() + "…";
   }
 
+  // Like wrap(), but the first line can be narrower than the rest
+  // (it shares its row with the price and pill).
+  function wrapFirst(ctx, text, firstW, restW, maxLines) {
+    const words = text.split(/\s+/);
+    let first = words[0];
+    let i = 1;
+    while (i < words.length && ctx.measureText(first + " " + words[i]).width <= firstW) first += " " + words[i++];
+    if (i === words.length) return [fitText(ctx, first, firstW)];
+    if (maxLines < 2) return [fitText(ctx, text, firstW)];
+    return [fitText(ctx, first, firstW)].concat(wrap(ctx, words.slice(i).join(" "), restW, maxLines - 1));
+  }
+
   function wrap(ctx, text, maxW, maxLines) {
     const words = text.split(/\s+/);
     const lines = [];
@@ -1205,16 +1476,21 @@
     main.addEventListener("click", onListClick);
     main.addEventListener("change", onListChange);
     main.addEventListener("input", onListInput);
-    $("#custom-form").addEventListener("submit", onCustomSubmit);
 
     $$("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
     $("#next-btn").addEventListener("click", () => {
       const bad = rudeNoteItem();
       if (bad) {
-        const note = $(`.item[data-id="${bad}"] .note`);
-        if (note) {
-          note.scrollIntoView({ block: "center" });
-          note.focus();
+        const li = $(`.item[data-id="${bad}"]`);
+        if (li) {
+          const pick = state.picks[bad];
+          const field = isRude(pick.other || "") ? $(".other-input", li) : $(".note", li);
+          if (field.classList.contains("note")) openDetails.add(bad);
+          openCat = li.closest(".group").dataset.cat;
+          syncCats();
+          syncItem(li);
+          field.scrollIntoView({ block: "center" });
+          field.focus();
         }
         toast(NAUGHTY_TOAST, 3200);
         return;
@@ -1247,7 +1523,10 @@
     $("#download-btn").addEventListener("click", downloadImage);
     $("#reset-btn").addEventListener("click", () => {
       if (!confirm("Clear this list and start a new one?")) return;
-      state = { picks: {}, custom: [], name: "", confirmed: false };
+      state = { picks: {}, custom: [], name: "", confirmed: false, sizes: {}, shoeSys: "US" };
+      openDetails.clear();
+      openOther.clear();
+      openCat = null;
       save();
       renderCategories();
       go("list");
