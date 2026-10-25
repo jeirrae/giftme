@@ -460,10 +460,20 @@
   function toggleCat(id) {
     openCat = openCat === id ? null : id;
     syncCats();
-    if (openCat) {
-      const head = $(`.group[data-cat="${openCat}"] .cat-head`);
-      head.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
+    if (openCat) scrollToCat(openCat);
+  }
+
+  // Bring a category's header just below the sticky top bar. Waits a frame so
+  // the category that just closed above it has collapsed first.
+  function scrollToCat(id) {
+    requestAnimationFrame(() => {
+      const head = $(`.group[data-cat="${id}"] .cat-head`);
+      if (!head) return;
+      const bar = $(".topbar").getBoundingClientRect().bottom;
+      const top = head.getBoundingClientRect().top + window.scrollY - bar - 12;
+      const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
+    });
   }
 
   function renderSizeChips(li, type) {
