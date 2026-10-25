@@ -31,6 +31,7 @@
   }
 
   const NAUGHTY = "Uh-oh, that just landed you on the naughty list 🚨 Try nicer words.";
+  const NAUGHTY_TOAST = { emoji: "🚨", title: "Uh-oh, naughty list!", text: "Try nicer words." };
   const STORAGE_KEY = "giftme:v1";
   const STEPS = ["list", "name", "review", "done"];
   const CATEGORIES = window.WISHLIST_CATEGORIES || [];
@@ -391,7 +392,7 @@
       let digits = e.target.value.replace(/\D/g, "").replace(/^0+/, "");
       if (Number(digits) > MAX_PRICE) {
         digits = String(MAX_PRICE);
-        toast("Whoa, big spender! Prices top out at ₱10,000.");
+        toast({ emoji: "💸", title: "Whoa, big spender!", text: "Prices top out at ₱10,000." });
       }
       if (digits !== e.target.value) e.target.value = digits;
       pick.price = digits;
@@ -407,12 +408,12 @@
     const name = input.value.trim().replace(/\s+/g, " ");
     if (!name) return;
     if (isRude(name)) {
-      toast(NAUGHTY, 3200);
+      toast(NAUGHTY_TOAST, 3200);
       return;
     }
     const dupe = findDuplicate(name);
     if (dupe) {
-      toast(dupe, 3500);
+      toast({ emoji: "🎁", title: "Already on the list", text: dupe }, 3500);
       return;
     }
     if (regularCount() >= MAX_ITEMS) {
@@ -540,7 +541,7 @@
         const li = document.createElement("li");
         li.className = "r-item";
         li.innerHTML = `<span class="r-main"><span class="r-name"></span>
-          <span class="r-sub"><span class="kind kind-${kindOf(it.kind)}">${KIND_LABEL[kindOf(it.kind)]}</span><span class="r-note"></span></span></span>
+          <span class="r-sub">${kindLabelHTML(it.kind)}<span class="r-note"></span></span></span>
           <span class="r-price"></span>`;
         $(".r-name", li).textContent = it.name;
         const note = (it.note || "").trim();
@@ -551,6 +552,12 @@
       section.append(h, ul);
       host.appendChild(section);
     });
+  }
+
+  function kindLabelHTML(kind) {
+    return kindParts(kindOf(kind))
+      .map((k) => `<span class="kind kind-${k}">${KIND_LABEL[k]}</span>`)
+      .join('<span class="kind-sep"> | </span>');
   }
 
   // ---------- Step 4: image ----------
@@ -634,7 +641,7 @@
     a.remove();
     // Messenger's built-in browser often ignores downloads.
     if (IN_APP) openSaveHelp();
-    else toast("Image saved 🎁");
+    else toast({ emoji: "🎁", title: "Image saved", text: "Now send it to the family!" });
   }
 
   // Canvas drawing — a fixed 1080×1620 (4:6) card that looks the same everywhere.
@@ -644,21 +651,23 @@
   const CONTENT_TOP = 300;
   const CONTENT_BOTTOM = H - 112;
   const C = {
-    bg: "#fbf7f0",
+    bg: "#ffffff",
     text: "#1d1d1f",
-    muted: "#8a8279",
+    muted: "#86868b",
     red: "#c8102e",
-    redDark: "#9e0c24",
     green: "#1f5e3f",
     gold: "#f4c542",
-    box: "#ebe5da",
-    inner: "#f9f6f1",
-    hairline: "#e4ddd1",
-    flake: "#e3d8c6",
+    fav: "#c8102e",
+    box: "#f2f2f5",
+    inner: "#ffffff",
+    hairline: "#e5e5ea",
+    flake: "#dedee4",
   };
+  // Want / Need pills share one saturation so neither shouts louder.
+  const PILL = { want: "#d29a17", need: "#2f9a5c" };
   const THEME = {
-    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.72)", hairline: "rgba(255,255,255,0.16)", want: "#d9a21b", need: "#4fa77a", both: ["#d9a21b", "#4fa77a"] },
-    light: { text: C.text, muted: C.muted, hairline: C.hairline, want: "#c98b0e", need: "#1e7b4e", both: ["#c98b0e", "#1e7b4e"] },
+    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.78)", hairline: "rgba(255,255,255,0.2)" },
+    light: { text: C.text, muted: C.muted, hairline: C.hairline },
   };
   const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
@@ -709,12 +718,10 @@
     // Background, ribbon, snow
     ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = C.red;
-    ctx.fillRect(0, 0, W, 12);
-    drawBow(ctx, W - 150, 12);
+    // Snowflakes sit in the side margins and corners, clear of all content.
     [
-      [470, 66, 14], [560, 40, 9], [640, 92, 12], [735, 52, 17], [830, 104, 10],
-      [W / 2 - 230, H - 72, 11], [W / 2 + 230, H - 72, 11],
+      [W - 46, 46, 15], [W - 92, 96, 9], [28, 420, 10], [W - 28, 640, 11],
+      [28, 900, 9], [W - 28, 1160, 10], [28, 1380, 11], [W - 46, H - 40, 12], [46, H - 40, 12],
     ].forEach(([x, y, r]) => snowflake(ctx, x, y, r));
 
     // Header: eyebrow → title → subtitle
@@ -781,7 +788,7 @@
     const boxes = [];
     if (data.favorites.length) {
       boxes.push(measureListBox(mctx, {
-        title: "Favorites", star: true, items: data.favorites, bg: C.green, theme: THEME.fav, big: true,
+        title: "Favorites", star: true, items: data.favorites, bg: C.fav, theme: THEME.fav, big: true,
       }, fullW, s));
     }
     if (data.kinds.length) {
@@ -890,9 +897,7 @@
         let sy = y + padTop + headerH;
         sections.forEach((sec) => {
           if (showLabels) {
-            const label = KIND_LABEL[sec.kind];
-            const pw = pill(ctx, x + padX, sy + 18 * s, label, 20 * s, 36 * s,
-              THEME.light[sec.kind]);
+            const pw = kindPill(ctx, x + padX, sy + 18 * s, sec.kind, 20 * s, 36 * s);
             setFont(ctx, 500, 20 * s);
             ctx.fillStyle = C.muted;
             ctx.textBaseline = "middle";
@@ -945,9 +950,9 @@
     const pillH = 28 * s;
     const priceSize = (opt.big ? 24 : 21) * s;
 
-    const label = KIND_LABEL[kindOf(it.kind)];
     setFont(mctx, 600, pillSize);
-    const pillW = opt.tag ? mctx.measureText(label).width + 24 * s : 0;
+    const kind = kindOf(it.kind);
+    const pillW = opt.tag ? kindPillWidth(mctx, kind, pillSize) : 0;
     const price = formatPrice(it.price);
     setFont(mctx, 500, priceSize);
     const priceW = price ? mctx.measureText(price).width : 0;
@@ -970,7 +975,7 @@
         let rx = x + w;
         if (opt.tag) {
           rx -= pillW;
-          pill(ctx, rx, mid, label, pillSize, pillH, theme[kindOf(it.kind)], pillW);
+          kindPill(ctx, rx, mid, kind, pillSize, pillH);
           rx -= 14 * s;
         }
         if (price) {
@@ -992,24 +997,35 @@
     };
   }
 
-  // Rounded pill with white text, vertically centered on cy. Returns its width.
-  function pill(ctx, x, cy, text, size, h, fill, width) {
+  // Want / Need pills with white text. "Both" is one pill split into a
+  // yellow "Want" half and a green "Need" half.
+  function kindParts(kind) {
+    return kind === "both" ? ["want", "need"] : [kind];
+  }
+
+  function kindPillWidth(ctx, kind, size) {
     setFont(ctx, 600, size);
-    const w = width || ctx.measureText(text).width + size * 1.5;
+    return kindParts(kind).reduce((w, k) => w + ctx.measureText(KIND_LABEL[k]).width + size * 1.4, 0);
+  }
+
+  function kindPill(ctx, x, cy, kind, size, h) {
+    const w = kindPillWidth(ctx, kind, size);
+    ctx.save();
     roundRect(ctx, x, cy - h / 2, w, h, h / 2);
-    if (Array.isArray(fill)) {
-      const g = ctx.createLinearGradient(x, 0, x + w, 0);
-      g.addColorStop(0, fill[0]);
-      g.addColorStop(1, fill[1]);
-      ctx.fillStyle = g;
-    } else {
-      ctx.fillStyle = fill;
-    }
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, x + w / 2, cy + size * 0.04);
+    ctx.clip();
+    let px = x;
+    kindParts(kind).forEach((k) => {
+      setFont(ctx, 600, size);
+      const pw = ctx.measureText(KIND_LABEL[k]).width + size * 1.4;
+      ctx.fillStyle = PILL[k];
+      ctx.fillRect(px, cy - h / 2, pw, h);
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(KIND_LABEL[k], px + pw / 2, cy + size * 0.04);
+      px += pw;
+    });
+    ctx.restore();
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     return w;
@@ -1018,32 +1034,6 @@
   function hairline(ctx, x1, x2, y, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x1, y - 1, x2 - x1, 2);
-  }
-
-  function drawBow(ctx, cx, top) {
-    ctx.fillStyle = C.red;
-    [-1, 1].forEach((d) => {
-      ctx.beginPath();
-      ctx.ellipse(cx + d * 24, top + 12, 26, 13, d * 0.45, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(cx + d * 4, top + 14);
-      ctx.lineTo(cx + d * 26, top + 58);
-      ctx.lineTo(cx + d * 12, top + 54);
-      ctx.lineTo(cx + d * 2, top + 64);
-      ctx.closePath();
-      ctx.fill();
-    });
-    ctx.fillStyle = C.bg;
-    [-1, 1].forEach((d) => {
-      ctx.beginPath();
-      ctx.ellipse(cx + d * 26, top + 12, 11, 4.5, d * 0.45, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.fillStyle = C.redDark;
-    ctx.beginPath();
-    ctx.arc(cx, top + 12, 10, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   function snowflake(ctx, cx, cy, r) {
@@ -1134,9 +1124,15 @@
   }
 
   let toastTimer;
-  function toast(msg, ms = 2200) {
+  // Short messages use the same card layout as the limit banners, in gray.
+  // msg is a string, or { emoji, title, text }.
+  function toast(msg, ms = 2600) {
     const el = $("#toast");
-    el.textContent = msg;
+    const m = typeof msg === "string" ? { text: msg } : msg;
+    el.innerHTML = `${m.emoji ? '<span class="limit-emoji" aria-hidden="true"></span>' : ""}<span>${m.title ? "<strong></strong>" : ""}<span class="toast-text"></span></span>`;
+    if (m.emoji) $(".limit-emoji", el).textContent = m.emoji;
+    if (m.title) $("strong", el).textContent = m.title;
+    $(".toast-text", el).textContent = m.text || "";
     el.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove("show"), ms);
@@ -1195,7 +1191,7 @@
           note.scrollIntoView({ block: "center" });
           note.focus();
         }
-        toast(NAUGHTY, 3200);
+        toast(NAUGHTY_TOAST, 3200);
         return;
       }
       go("name");
