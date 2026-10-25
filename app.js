@@ -1560,7 +1560,7 @@
     const xmas = new Date(christmasYear(now), 11, 25);
     const days = Math.round((xmas - today) / 86400000);
     $("#countdown").textContent =
-      days === 0 ? "🎄 Merry Christmas!" : `${days} ${days === 1 ? "day" : "days"} to Christmas`;
+      days === 0 ? "🎄 Merry Christmas!" : `${days} ${days === 1 ? "day" : "days"} until Christmas`;
     $$(".js-year").forEach((el) => (el.textContent = christmasYear(now)));
   }
 
