@@ -474,3 +474,25 @@ body.modal-open { overflow: hidden; }
 @supports not (aspect-ratio: 1) {
   .preview { min-height: 320px; }
 }
+
+/* Last page: 2×2 actions */
+.action-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  max-width: 400px; margin: 20px auto 0;
+}
+.action {
+  display: grid; gap: 2px; justify-items: center; text-align: center;
+  padding: 14px 10px; border: 0; border-radius: 16px; cursor: pointer;
+  background: var(--surface); color: var(--text);
+  transition: transform .1s, opacity .15s;
+}
+.action strong { font-size: 16px; font-weight: 600; }
+.action span { font-size: 12px; color: var(--muted); }
+.action-primary { background: #c8102e; color: #fff; }
+.action-green { background: #1e7b4e; color: #fff; }
+.action-primary span, .action-green span { color: rgba(255, 255, 255, .85); }
+.action:active { transform: scale(.98); }
+.action:disabled { opacity: .45; cursor: not-allowed; }
+.action:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.preview-hint { max-width: 400px; margin: -8px auto 0; }
+.done-footer { display: flex; justify-content: center; margin: 16px 0 48px; }

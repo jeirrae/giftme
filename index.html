@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=202610251600" />
+  <link rel="stylesheet" href="styles.css?v=202610251610" />
 </head>
 <body>
   <header class="topbar">
@@ -74,20 +74,28 @@
       <div class="hero center">
         <p class="eyebrow">All set</p>
         <h1>Your wishlist is ready</h1>
-        <p class="lead">Save it or send it to the family on Messenger.</p>
+        <p class="lead">Share it with your family.</p>
+      </div>
+      <div class="action-grid">
+        <button type="button" class="action action-primary" id="download-btn">
+          <strong>Download</strong><span>Save to your phone</span>
+        </button>
+        <button type="button" class="action action-green" id="share-btn">
+          <strong>Share</strong><span>Send on Messenger</span>
+        </button>
+        <button type="button" class="action" data-go="list">
+          <strong>Edit list</strong><span>Change your gifts</span>
+        </button>
+        <button type="button" class="action" id="edit-link-btn">
+          <strong>Copy edit link</strong><span>Edit it again later</span>
+        </button>
       </div>
       <div class="preview">
         <img id="preview-img" alt="Your Christmas wishlist" />
         <div class="preview-loading" id="preview-loading">Wrapping your list…</div>
       </div>
-      <div class="stack-actions narrow">
-        <button type="button" class="btn btn-primary btn-block" id="share-btn" hidden>Share to Messenger</button>
-        <button type="button" class="btn btn-secondary btn-block" id="download-btn">Download image</button>
-        <a class="btn btn-plain btn-block" id="messenger-link" href="https://www.messenger.com/" target="_blank" rel="noopener" hidden>Open Messenger</a>
-        <p class="hint" id="share-hint"></p>
-        <button type="button" class="btn btn-plain btn-block" data-go="list">Edit my list</button>
-        <button type="button" class="btn btn-plain btn-block" id="edit-link-btn">Copy my edit link</button>
-        <p class="hint">Save the link to change your list later.</p>
+      <p class="hint preview-hint">Download not working? Press and hold the image, then tap Save image.</p>
+      <div class="done-footer">
         <button type="button" class="link" id="reset-btn">Start a new list</button>
       </div>
     </section>
@@ -176,7 +184,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="items.js?v=202610251600"></script>
-  <script src="app.js?v=202610251600"></script>
+  <script src="items.js?v=202610251610"></script>
+  <script src="app.js?v=202610251610"></script>
 </body>
 </html>

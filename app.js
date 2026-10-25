@@ -956,11 +956,12 @@
     return `${n}${/s$/i.test(n) ? "'" : "'s"} Christmas Wishlist.png`;
   }
 
+  let canShareFile = false;
+
+  // Share uses the phone's share sheet when it can; otherwise it saves the
+  // image and explains how to send it.
   function setupShareUI(blob) {
-    const shareBtn = $("#share-btn");
-    const hint = $("#share-hint");
-    const msgLink = $("#messenger-link");
-    let canShareFile = false;
+    canShareFile = false;
     if (blob && navigator.canShare) {
       try {
         const file = new File([blob], fileName(), { type: "image/png" });
@@ -969,19 +970,16 @@
         canShareFile = false;
       }
     }
-    shareBtn.hidden = !canShareFile;
-    msgLink.hidden = canShareFile || !blob || IN_APP;
-    hint.textContent = !blob
-      ? ""
-      : IN_APP
-      ? "If Download doesn't work, press and hold the image to save it."
-      : canShareFile
-      ? "Tap Share, then pick Messenger. You can also long-press the image to save it."
-      : "Download the image, then send it to the family in Messenger.";
+    $("#download-btn").disabled = !blob;
+    $("#share-btn").disabled = !blob;
   }
 
   async function shareImage() {
     if (!currentBlob) return;
+    if (!canShareFile) {
+      downloadImage(true);
+      return;
+    }
     const file = new File([currentBlob], fileName(), { type: "image/png" });
     try {
       await navigator.share({ files: [file], title: `${possessive(state.name.trim())} Christmas Wishlist` });
@@ -990,7 +988,7 @@
     }
   }
 
-  function downloadImage() {
+  function downloadImage(forShare) {
     if (!currentURL) return;
     const a = document.createElement("a");
     a.href = currentURL;
@@ -1000,6 +998,7 @@
     a.remove();
     // Messenger's built-in browser often ignores downloads.
     if (IN_APP) openSaveHelp();
+    else if (forShare === true) toast({ emoji: "📨", title: "Image saved", text: "Open Messenger and send it from your photos." }, 3500);
     else toast({ emoji: "🎁", title: "Image saved", text: "Now send it to the family!" });
   }
 
@@ -1649,7 +1648,7 @@
     });
 
     $("#share-btn").addEventListener("click", shareImage);
-    $("#download-btn").addEventListener("click", downloadImage);
+    $("#download-btn").addEventListener("click", () => downloadImage());
     $("#reset-btn").addEventListener("click", () => {
       if (!confirm("Clear this list and start a new one?")) return;
       state = { picks: {}, custom: [], name: "", confirmed: false, sizes: {}, shoeSys: "US" };
