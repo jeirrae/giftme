@@ -1,8 +1,8 @@
 (function () {
   "use strict";
 
-  const MAX_TOP = 5;
-  const MAX_ITEMS = 12; // gifts that aren't favorites
+  const MAX_TOP = 4;
+  const MAX_ITEMS = 8; // gifts that aren't favorites
 
   const KINDS = ["want", "need", "both"];
   const KIND_LABEL = { want: "Want", need: "Need", both: "Want & Need" };
@@ -914,6 +914,7 @@
     green: "#1f5e3f",
     gold: "#f4c542",
     fav: "#c8102e",
+    favInner: "#d8384d", // lighter red box inside Favorites
     box: "#f2f2f5",
     inner: "#ffffff",
     hairline: "#e5e5ea",
@@ -1062,6 +1063,7 @@
     if (data.favorites.length) {
       boxes.push(measureListBox(mctx, {
         title: "Favorites", star: true, items: data.favorites, bg: C.fav, theme: THEME.fav, big: true,
+        inner: true, innerBg: C.favInner,
       }, fullW, s));
     }
     if (data.kinds.length) {
@@ -1126,7 +1128,7 @@
         const top = y + padTop + headerH;
         if (o.inner) {
           roundRect(ctx, x + padX, top, w - padX * 2, rowsH, 24);
-          ctx.fillStyle = C.inner;
+          ctx.fillStyle = o.innerBg || C.inner;
           ctx.fill();
         }
         const left = x + padX + innerPad;
