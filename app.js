@@ -854,7 +854,7 @@
   // The big gray box: Want / Need sections (labels only when both exist),
   // each with category boxes in columns.
   function measureMainBox(mctx, title, kinds, w, s, maxCols) {
-    const padX = 28 * s;
+    const padX = 32 * s; // same as the other boxes, so all pills share one right edge
     const padTop = 30 * s;
     const padBottom = 28 * s;
     const headerSize = 22 * s;
@@ -897,11 +897,16 @@
         let sy = y + padTop + headerH;
         sections.forEach((sec) => {
           if (showLabels) {
-            const pw = kindPill(ctx, x + padX, sy + 18 * s, sec.kind, 20 * s, 36 * s);
+            // Right-aligned on the same vertical line as the item pills.
+            const right = x + w - padX;
+            const pw = kindPillWidth(ctx, sec.kind, 20 * s);
+            kindPill(ctx, right - pw, sy + 18 * s, sec.kind, 20 * s, 36 * s);
             setFont(ctx, 500, 20 * s);
             ctx.fillStyle = C.muted;
+            ctx.textAlign = "right";
             ctx.textBaseline = "middle";
-            ctx.fillText(`${sec.count} ${sec.count === 1 ? "item" : "items"}`, x + padX + pw + 12 * s, sy + 19 * s);
+            ctx.fillText(`${sec.count} ${sec.count === 1 ? "item" : "items"}`, right - pw - 12 * s, sy + 19 * s);
+            ctx.textAlign = "left";
             ctx.textBaseline = "alphabetic";
           }
           sec.cats.forEach((c) => c.box.draw(ctx, x + padX + c.dx, sy + labelH + c.dy));
