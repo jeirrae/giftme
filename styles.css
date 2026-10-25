@@ -161,8 +161,8 @@ h1 {
 .details { display: none; padding: 0 4px 14px 36px; }
 .item.is-checked .details { display: grid; gap: 10px; }
 .seg {
-  display: grid; grid-template-columns: 1fr 1fr; padding: 2px; border-radius: 9px;
-  background: var(--fill); max-width: 220px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 2px; border-radius: 9px;
+  background: var(--fill); max-width: 300px;
 }
 .seg button {
   border: 0; background: transparent; height: 30px; border-radius: 7px;
@@ -176,6 +176,14 @@ h1 {
 @media (prefers-color-scheme: dark) { .seg button[aria-pressed="true"] { background: #636366; } }
 .seg button[aria-pressed="true"][data-kind="want"] { color: var(--amber); }
 .seg button[aria-pressed="true"][data-kind="need"] { color: var(--green); }
+.seg button[aria-pressed="true"][data-kind="both"], .kind-both {
+  color: var(--green);
+  background-image: linear-gradient(90deg, var(--amber), var(--green));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.seg button[aria-pressed="true"][data-kind="both"] { background-color: var(--surface); }
+@media (prefers-color-scheme: dark) { .seg button[aria-pressed="true"][data-kind="both"] { background-color: #636366; } }
+.kind-hint { margin: -2px 0 0; font-size: 13px; color: var(--muted); }
 
 .detail-fields { display: grid; grid-template-columns: 1fr 112px; gap: 8px; }
 .price-field { position: relative; }
@@ -355,6 +363,7 @@ input::placeholder { color: var(--muted); }
 .modal-emoji { font-size: 44px; line-height: 1; margin-bottom: 10px; }
 .modal-card h2 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
 .modal-lead { margin: 6px 0 10px; color: var(--muted); font-size: 15px; }
+#save-help .steps { margin-bottom: 8px; }
 .modal-check {
   display: flex; align-items: center; gap: 10px; margin: 14px 0 16px;
   font-size: 15px; color: var(--muted); cursor: pointer;
@@ -385,19 +394,6 @@ body.modal-open { overflow: hidden; }
 .step-body strong { font-size: 16px; font-weight: 600; line-height: 1.3; }
 .step-body span { font-size: 15px; color: var(--muted); line-height: 1.4; text-wrap: pretty; }
 .modal-card h2, .modal-lead { text-wrap: balance; }
-
-/* Inside Messenger / Facebook */
-.inapp { margin-top: 20px; padding: 18px; border: 1.5px solid var(--gold); }
-.inapp-title { display: block; font-size: 17px; font-weight: 700; }
-.inapp-text { margin: 4px 0 0; color: var(--muted); font-size: 15px; text-wrap: pretty; }
-.steps.compact { margin: 14px 0 4px; }
-.steps.compact li { padding-bottom: 12px; align-items: center; }
-.steps.compact li:not(:last-child)::before { display: none; }
-.steps.compact .step-num { width: 28px; height: 28px; font-size: 14px; }
-.steps.compact .step-body { padding-top: 0; }
-.steps.compact .step-body span { color: var(--text); }
-.inapp-actions { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
-#step-done .inapp { margin: 0 auto 16px; max-width: 400px; }
 
 /* Older browsers without aspect-ratio */
 @supports not (aspect-ratio: 1) {

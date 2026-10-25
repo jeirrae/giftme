@@ -28,25 +28,6 @@
         <p class="lead">Pick the gifts you'd love to get. <button type="button" class="link-inline" id="tips-show">How it works</button></p>
       </div>
 
-      <div class="card inapp" id="inapp" hidden>
-        <strong class="inapp-title">Open this page in your browser first</strong>
-        <p class="inapp-text">You're inside Messenger, which can't save images. Open the page in your phone's browser before you start.</p>
-        <ol class="steps compact">
-          <li>
-            <span class="step-num" aria-hidden="true">1</span>
-            <span class="step-body"><span>Tap <strong>⋯</strong> at the top of the screen.</span></span>
-          </li>
-          <li>
-            <span class="step-num" aria-hidden="true">2</span>
-            <span class="step-body"><span>Tap <strong>Open in browser</strong> (it may say Safari or Chrome).</span></span>
-          </li>
-        </ol>
-        <div class="inapp-actions">
-          <button type="button" class="btn btn-soft" id="inapp-copy">Copy link</button>
-          <button type="button" class="link" id="inapp-stay">Continue here anyway</button>
-        </div>
-      </div>
-
       <div id="categories"></div>
 
       <section class="group">
@@ -104,19 +85,6 @@
         <h1>Your wishlist is ready</h1>
         <p class="lead">Save it or send it to the family on Messenger.</p>
       </div>
-      <div class="card inapp" id="inapp-done" hidden>
-        <strong class="inapp-title">Saving inside Messenger</strong>
-        <ol class="steps compact">
-          <li>
-            <span class="step-num" aria-hidden="true">1</span>
-            <span class="step-body"><span>Press and hold the image below.</span></span>
-          </li>
-          <li>
-            <span class="step-num" aria-hidden="true">2</span>
-            <span class="step-body"><span>Tap <strong>Save image</strong>, then send it in your family chat.</span></span>
-          </li>
-        </ol>
-      </div>
       <div class="preview">
         <img id="preview-img" alt="Your Christmas wishlist" />
         <div class="preview-loading" id="preview-loading">Wrapping your list…</div>
@@ -172,7 +140,7 @@
         <li>
           <span class="step-num" aria-hidden="true">3</span>
           <span class="step-body">
-            <strong>Choose Want or Need</strong>
+            <strong>Choose Want, Need, or Both</strong>
             <span>Add a note for size, color, or brand if it helps.</span>
           </span>
         </li>
@@ -190,6 +158,31 @@
         <span>Don't show this again</span>
       </label>
       <button type="button" class="btn btn-primary btn-block" id="tutorial-continue">Continue</button>
+    </div>
+  </div>
+
+  <div class="modal" id="save-help" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="save-help-title" tabindex="-1">
+      <button type="button" class="modal-x" id="save-help-x" aria-label="Close">×</button>
+      <p class="modal-eyebrow">Saving your image</p>
+      <h2 id="save-help-title">Didn't download?</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-num" aria-hidden="true">1</span>
+          <span class="step-body">
+            <strong>Press and hold the image</strong>
+            <span>Keep your finger on your wishlist picture.</span>
+          </span>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">2</span>
+          <span class="step-body">
+            <strong>Tap Save image</strong>
+            <span>It goes to your photos. Then send it in the family chat.</span>
+          </span>
+        </li>
+      </ol>
+      <button type="button" class="btn btn-primary btn-block" id="save-help-ok">Got it</button>
     </div>
   </div>
 

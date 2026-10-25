@@ -3,7 +3,16 @@
 
   const MAX_TOP = 5;
   const MAX_ITEMS = 12; // gifts that aren't favorites
-  const MAX_PRICE = 100000;
+  const MAX_PRICE = 10000;
+
+  const KINDS = ["want", "need", "both"];
+  const KIND_LABEL = { want: "Want", need: "Need", both: "Want & Need" };
+  const KIND_HINT = {
+    want: "Want: nice to have, just for fun.",
+    need: "Need: something you really need.",
+    both: "Both: you need it and you'd love it.",
+  };
+  const kindOf = (k) => (KINDS.includes(k) ? k : "want");
 
   // A small family-friendly filter. Short words only match as whole words
   // so things like "computer" or "reputation" don't trip it.
@@ -37,7 +46,7 @@
     localStorage.removeItem(STORAGE_KEY); // lists saved by older versions
   } catch (_) {}
 
-  // picks: { [itemId]: { kind: "want" | "need", note, price, top } }
+  // picks: { [itemId]: { kind: "want" | "need" | "both", note, price, top } }
   // custom: [{ id, name }] — user-added items (always shown in "Something else?")
   let state = load() || { picks: {}, custom: [], name: "", confirmed: false };
 
@@ -51,7 +60,7 @@
         const p = s.picks[id] || {};
         const price = String(p.price || "").replace(/\D/g, "");
         picks[id] = {
-          kind: p.kind === "need" ? "need" : "want",
+          kind: kindOf(p.kind),
           note: String(p.note || "").slice(0, 80),
           price: price && Number(price) > MAX_PRICE ? String(MAX_PRICE) : price,
           top: !!p.top,
@@ -154,15 +163,17 @@
           ${removable ? `<button type="button" class="icon-btn remove" aria-label="Remove item">×</button>` : ""}
         </div>
         <div class="details">
-          <div class="seg" role="group" aria-label="Want or need">
+          <div class="seg" role="group" aria-label="Want, need, or both">
             <button type="button" data-kind="want" aria-pressed="true">Want</button>
             <button type="button" data-kind="need" aria-pressed="false">Need</button>
+            <button type="button" data-kind="both" aria-pressed="false">Both</button>
           </div>
+          <p class="kind-hint"></p>
           <div class="detail-fields">
             <input type="text" class="note" maxlength="80" placeholder="Note (size, color…)" aria-label="Note" />
             <label class="price-field">
               <span>₱</span>
-              <input type="text" class="price" inputmode="numeric" maxlength="6" placeholder="Price" aria-label="Price in pesos" />
+              <input type="text" class="price" inputmode="numeric" maxlength="5" placeholder="Price" aria-label="Price in pesos" />
             </label>
           </div>
         </div>
@@ -211,6 +222,7 @@
       $$(".seg button", li).forEach((b) =>
         b.setAttribute("aria-pressed", String(b.dataset.kind === pick.kind))
       );
+      $(".kind-hint", li).textContent = KIND_HINT[kindOf(pick.kind)];
       const note = $(".note", li);
       const price = $(".price", li);
       if (document.activeElement !== note) note.value = pick.note || "";
@@ -379,7 +391,7 @@
       let digits = e.target.value.replace(/\D/g, "").replace(/^0+/, "");
       if (Number(digits) > MAX_PRICE) {
         digits = String(MAX_PRICE);
-        toast("Whoa, big spender! Prices top out at ₱100,000.");
+        toast("Whoa, big spender! Prices top out at ₱10,000.");
       }
       if (digits !== e.target.value) e.target.value = digits;
       pick.price = digits;
@@ -528,7 +540,7 @@
         const li = document.createElement("li");
         li.className = "r-item";
         li.innerHTML = `<span class="r-main"><span class="r-name"></span>
-          <span class="r-sub"><span class="kind kind-${it.kind}">${it.kind === "need" ? "Need" : "Want"}</span><span class="r-note"></span></span></span>
+          <span class="r-sub"><span class="kind kind-${kindOf(it.kind)}">${KIND_LABEL[kindOf(it.kind)]}</span><span class="r-note"></span></span></span>
           <span class="r-price"></span>`;
         $(".r-name", li).textContent = it.name;
         const note = (it.note || "").trim();
@@ -596,7 +608,7 @@
     hint.textContent = !blob
       ? ""
       : IN_APP
-      ? "If Download doesn't work, follow the steps above."
+      ? "If Download doesn't work, press and hold the image to save it."
       : canShareFile
       ? "Tap Share, then pick Messenger. You can also long-press the image to save it."
       : "Download the image, then send it to the family in Messenger.";
@@ -620,7 +632,9 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast("Image saved 🎁");
+    // Messenger's built-in browser often ignores downloads.
+    if (IN_APP) openSaveHelp();
+    else toast("Image saved 🎁");
   }
 
   // Canvas drawing — a fixed 1080×1620 (4:6) card that looks the same everywhere.
@@ -643,8 +657,8 @@
     flake: "#e3d8c6",
   };
   const THEME = {
-    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.72)", hairline: "rgba(255,255,255,0.16)", want: "#d9a21b", need: "#4fa77a" },
-    light: { text: C.text, muted: C.muted, hairline: C.hairline, want: "#c98b0e", need: "#1e7b4e" },
+    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.72)", hairline: "rgba(255,255,255,0.16)", want: "#d9a21b", need: "#4fa77a", both: ["#d9a21b", "#4fa77a"] },
+    light: { text: C.text, muted: C.muted, hairline: C.hairline, want: "#c98b0e", need: "#1e7b4e", both: ["#c98b0e", "#1e7b4e"] },
   };
   const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
@@ -657,19 +671,19 @@
   function cardData() {
     const favorites = [];
     const custom = [];
-    const byKind = { want: [], need: [] };
+    const byKind = { want: [], need: [], both: [] };
     pickedGroups().forEach((g) => {
-      const perKind = { want: [], need: [] };
+      const perKind = { want: [], need: [], both: [] };
       g.items.forEach((it) => {
         if (it.top) favorites.push(it);
         else if (g.category === CUSTOM_CATEGORY) custom.push(it);
-        else perKind[it.kind === "need" ? "need" : "want"].push(it);
+        else perKind[kindOf(it.kind)].push(it);
       });
-      ["want", "need"].forEach((k) => {
+      KINDS.forEach((k) => {
         if (perKind[k].length) byKind[k].push({ title: g.category.name, items: perKind[k] });
       });
     });
-    const kinds = ["want", "need"].filter((k) => byKind[k].length).map((k) => ({ kind: k, cats: byKind[k] }));
+    const kinds = KINDS.filter((k) => byKind[k].length).map((k) => ({ kind: k, cats: byKind[k] }));
     return { favorites, custom, kinds };
   }
 
@@ -700,7 +714,7 @@
     drawBow(ctx, W - 150, 12);
     [
       [470, 66, 14], [560, 40, 9], [640, 92, 12], [735, 52, 17], [830, 104, 10],
-      [W / 2 - 230, H - 62, 11], [W / 2 + 230, H - 62, 11],
+      [W / 2 - 230, H - 72, 11], [W / 2 + 230, H - 72, 11],
     ].forEach(([x, y, r]) => snowflake(ctx, x, y, r));
 
     // Header: eyebrow → title → subtitle
@@ -749,7 +763,10 @@
     setFont(ctx, 600, 26);
     ctx.fillStyle = C.green;
     ctx.textAlign = "center";
-    ctx.fillText("Merry Christmas", W / 2, H - 54);
+    ctx.fillText("Merry Christmas", W / 2, H - 64);
+    setFont(ctx, 400, 18);
+    ctx.fillStyle = C.muted;
+    ctx.fillText("This is a wishlist. Gifts are not guaranteed.", W / 2, H - 28);
     ctx.textAlign = "left";
 
     return new Promise((resolve, reject) =>
@@ -873,7 +890,7 @@
         let sy = y + padTop + headerH;
         sections.forEach((sec) => {
           if (showLabels) {
-            const label = sec.kind === "need" ? "Need" : "Want";
+            const label = KIND_LABEL[sec.kind];
             const pw = pill(ctx, x + padX, sy + 18 * s, label, 20 * s, 36 * s,
               THEME.light[sec.kind]);
             setFont(ctx, 500, 20 * s);
@@ -928,7 +945,7 @@
     const pillH = 28 * s;
     const priceSize = (opt.big ? 24 : 21) * s;
 
-    const label = it.kind === "need" ? "Need" : "Want";
+    const label = KIND_LABEL[kindOf(it.kind)];
     setFont(mctx, 600, pillSize);
     const pillW = opt.tag ? mctx.measureText(label).width + 24 * s : 0;
     const price = formatPrice(it.price);
@@ -953,7 +970,7 @@
         let rx = x + w;
         if (opt.tag) {
           rx -= pillW;
-          pill(ctx, rx, mid, label, pillSize, pillH, theme[it.kind === "need" ? "need" : "want"], pillW);
+          pill(ctx, rx, mid, label, pillSize, pillH, theme[kindOf(it.kind)], pillW);
           rx -= 14 * s;
         }
         if (price) {
@@ -980,7 +997,14 @@
     setFont(ctx, 600, size);
     const w = width || ctx.measureText(text).width + size * 1.5;
     roundRect(ctx, x, cy - h / 2, w, h, h / 2);
-    ctx.fillStyle = fill;
+    if (Array.isArray(fill)) {
+      const g = ctx.createLinearGradient(x, 0, x + w, 0);
+      g.addColorStop(0, fill[0]);
+      g.addColorStop(1, fill[1]);
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = fill;
+    }
     ctx.fill();
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
@@ -1132,36 +1156,28 @@
   // where downloads often fail. Guide people to their real browser.
   const IN_APP = /FBAN|FBAV|FB_IAB|FBIOS|Messenger|Instagram|Line\//i.test(navigator.userAgent);
 
-  function setupInApp() {
-    if (!IN_APP) return;
-    let dismissed = false;
-    try {
-      dismissed = sessionStorage.getItem("giftme:inapp-dismissed") === "1";
-    } catch (_) {}
-    $("#inapp").hidden = dismissed;
-    $("#inapp-done").hidden = false;
-    $("#inapp-stay").addEventListener("click", () => {
-      $("#inapp").hidden = true;
-      try {
-        sessionStorage.setItem("giftme:inapp-dismissed", "1");
-      } catch (_) {}
-    });
-    $("#inapp-copy").addEventListener("click", async () => {
-      const url = location.origin + location.pathname;
-      try {
-        await navigator.clipboard.writeText(url);
-        toast("Link copied. Paste it into Safari or Chrome.");
-      } catch (_) {
-        window.prompt("Copy this link, then paste it into Safari or Chrome:", url);
-      }
-    });
+  function openSaveHelp() {
+    const modal = $("#save-help");
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    setTimeout(() => $(".modal-card", modal).focus(), 50);
+  }
+
+  function closeSaveHelp() {
+    $("#save-help").hidden = true;
+    document.body.classList.remove("modal-open");
+    $("#download-btn").focus();
   }
 
   // ---------- Wire up ----------
 
   function init() {
     renderCountdown();
-    setupInApp();
+    $("#save-help-x").addEventListener("click", closeSaveHelp);
+    $("#save-help-ok").addEventListener("click", closeSaveHelp);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("#save-help").hidden) closeSaveHelp();
+    });
     renderCategories();
 
     const main = $("main");
