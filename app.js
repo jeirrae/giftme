@@ -1068,11 +1068,11 @@
     a.remove();
     // Messenger's built-in browser often ignores downloads.
     if (forShare === true) {
-      toast({ emoji: "📨", title: "Image saved", text: "Sharing isn't available here. Send it from your photos." }, 3000);
+      notice("download-btn", "Image saved", "Sharing isn't available here. Send it from your photos.");
     } else if (IN_APP) {
-      toast({ emoji: "⬇️", title: "Downloading…", text: "If it didn't save, press and hold the image, then tap Save Image." }, 3000);
+      notice("download-btn", "Downloading…", "If it didn't save, press and hold the image, then tap Save Image.");
     } else {
-      toast({ emoji: "⬇️", title: "Image saved", text: "It's in your downloads or photos." }, 3000);
+      notice("download-btn", "Image saved", "It's in your downloads or photos.");
     }
   }
 
@@ -1626,6 +1626,27 @@
   }
 
   let toastTimer;
+  // Centered 3-second pop-up for the last page's buttons, with the same icon
+  // as the button that was tapped.
+  let noticeTimer;
+  function notice(buttonId, title, text) {
+    const modal = $("#notice");
+    const icon = $("#notice-icon");
+    const btn = $(`#${buttonId}`);
+    icon.innerHTML = $(".icon-tile", btn).innerHTML;
+    icon.classList.toggle("is-green", btn.classList.contains("icon-action-green"));
+    $("#notice-title").textContent = title;
+    $("#notice-text").textContent = text;
+    modal.hidden = false;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(closeNotice, 3000);
+  }
+
+  function closeNotice() {
+    clearTimeout(noticeTimer);
+    $("#notice").hidden = true;
+  }
+
   // Short messages use the same card layout as the limit banners, in gray.
   // msg is a string, or { emoji, title, text }.
   function toast(msg, ms = 2600) {
@@ -1792,6 +1813,7 @@
       editModal.hidden = true;
       document.body.classList.remove("modal-open");
     };
+    $("#notice").addEventListener("click", closeNotice);
     $("#edit-list-btn").addEventListener("click", () => {
       editModal.hidden = false;
       document.body.classList.add("modal-open");
@@ -1810,7 +1832,7 @@
       const url = editLink();
       try {
         await navigator.clipboard.writeText(url);
-        toast({ emoji: "🔗", title: "Edit link copied", text: "Paste it somewhere safe. Open it later to edit your list." }, 3000);
+        notice("edit-link-btn", "Edit link copied", "Paste it somewhere safe. Open it later to edit your list.");
       } catch (_) {
         window.prompt("Copy this link. Open it later to change your list:", url);
       }

@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=202610251750" />
+  <link rel="stylesheet" href="styles.css?v=202610251800" />
 </head>
 <body>
   <header class="topbar">
@@ -170,6 +170,14 @@
     </div>
   </div>
 
+  <div class="modal" id="notice" hidden>
+    <div class="modal-card notice-card" role="status" aria-live="polite" tabindex="-1">
+      <span class="icon-tile notice-icon" id="notice-icon" aria-hidden="true"></span>
+      <h2 id="notice-title"></h2>
+      <p class="modal-lead" id="notice-text"></p>
+    </div>
+  </div>
+
   <div class="modal" id="edit-confirm" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-confirm-title" tabindex="-1">
       <h2 id="edit-confirm-title">Edit your list?</h2>
@@ -208,7 +216,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="items.js?v=202610251750"></script>
-  <script src="app.js?v=202610251750"></script>
+  <script src="items.js?v=202610251800"></script>
+  <script src="app.js?v=202610251800"></script>
 </body>
 </html>
