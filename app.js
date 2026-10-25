@@ -438,20 +438,28 @@
     toast("Image saved 🎁");
   }
 
-  // Canvas drawing — always a light card so it looks the same everywhere.
+  // Canvas drawing — a fixed 1080×1620 (4:6) card that looks the same everywhere.
   const W = 1080;
-  const H = 1350;
-  const PAD = 72;
+  const H = 1620;
+  const PAD = 64;
+  const CONTENT_TOP = 300;
+  const CONTENT_BOTTOM = H - 112;
   const C = {
-    bg: "#ffffff",
-    box: "#f5f5f7",
+    bg: "#fbf7f0",
     text: "#1d1d1f",
-    muted: "#86868b",
-    hairline: "#e3e3e8",
+    muted: "#8a8279",
     red: "#c8102e",
-    green: "#1e7b4e",
-    amber: "#b07400",
-    gold: "#f5b300",
+    redDark: "#9e0c24",
+    green: "#1f5e3f",
+    gold: "#f4c542",
+    box: "#ebe5da",
+    inner: "#f9f6f1",
+    hairline: "#e4ddd1",
+    flake: "#e3d8c6",
+  };
+  const THEME = {
+    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.72)", hairline: "rgba(255,255,255,0.16)", want: "#d9a21b", need: "#4fa77a" },
+    light: { text: C.text, muted: C.muted, hairline: C.hairline, want: "#c98b0e", need: "#1e7b4e" },
   };
   const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
@@ -461,82 +469,102 @@
     await Promise.race([loads, new Promise((r) => setTimeout(r, 2500))]);
   }
 
+  function cardData() {
+    const favorites = [];
+    const custom = [];
+    const byKind = { want: [], need: [] };
+    pickedGroups().forEach((g) => {
+      const perKind = { want: [], need: [] };
+      g.items.forEach((it) => {
+        if (it.top) favorites.push(it);
+        else if (g.category === CUSTOM_CATEGORY) custom.push(it);
+        else perKind[it.kind === "need" ? "need" : "want"].push(it);
+      });
+      ["want", "need"].forEach((k) => {
+        if (perKind[k].length) byKind[k].push({ title: g.category.name, items: perKind[k] });
+      });
+    });
+    const kinds = ["want", "need"].filter((k) => byKind[k].length).map((k) => ({ kind: k, cats: byKind[k] }));
+    return { favorites, custom, kinds };
+  }
+
   async function drawCard() {
     await ensureFonts();
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
-    let ctx = canvas.getContext("2d");
-
-    const groups = pickedGroups();
-    const tops = [];
-    groups.forEach((g) => g.items.forEach((it) => it.top && tops.push(it)));
-    const rest = groups
-      .map((g) => ({ title: g.category.name, items: g.items.filter((it) => !it.top) }))
-      .filter((g) => g.items.length);
+    const ctx = canvas.getContext("2d");
+    const data = cardData();
     const total = pickCount();
 
-    const top = 300;
-    const footerH = 110;
-
-    // Fit into 1080×1350: one column, then two, shrinking a little.
-    // Long lists never get cut off; the image grows taller instead.
+    // Pick the largest text size that fits; shrink further only if needed.
     const attempts = [];
-    for (let s = 1; s >= 0.8; s -= 0.05) attempts.push({ cols: 1, s });
-    for (let s = 0.94; s >= 0.78; s -= 0.04) attempts.push({ cols: 2, s });
+    for (let s = 1.36; s >= 0.6; s -= 0.04) attempts.push({ s, cols: 2 });
+    for (let s = 0.62; s >= 0.5; s -= 0.04) attempts.push({ s, cols: 3 });
     let plan = null;
     for (const a of attempts) {
-      plan = layout(ctx, tops, rest, a.cols, a.s, top);
-      if (plan.bottom <= H - footerH) break;
-      plan = null;
-    }
-    if (!plan) plan = layout(ctx, tops, rest, 2, 0.86, top);
-    const height = Math.max(H, Math.ceil(plan.bottom + footerH));
-    if (height !== canvas.height) {
-      canvas.height = height; // resets context state
-      ctx = canvas.getContext("2d");
+      plan = layout(ctx, data, a.s, a.cols);
+      if (plan.bottom <= CONTENT_BOTTOM) break;
     }
 
+    // Background, ribbon, snow
     ctx.fillStyle = C.bg;
-    ctx.fillRect(0, 0, W, height);
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = C.red;
+    ctx.fillRect(0, 0, W, 12);
+    drawBow(ctx, W - 150, 12);
+    [
+      [470, 66, 14], [560, 40, 9], [640, 92, 12], [735, 52, 17], [830, 104, 10],
+      [W / 2 - 230, H - 62, 11], [W / 2 + 230, H - 62, 11],
+    ].forEach(([x, y, r]) => snowflake(ctx, x, y, r));
 
     // Header: eyebrow → title → subtitle
-    let y = PAD + 28;
     setFont(ctx, 600, 28);
     ctx.fillStyle = C.red;
-    ctx.fillText(`Christmas ${christmasYear()}`, PAD, y);
+    ctx.fillText(`Christmas ${christmasYear()}`, PAD, 104);
 
     const title = `${possessive(state.name.trim())} Wishlist`;
     let size = 80;
-    spaced(ctx, -0.03 * size);
-    setFont(ctx, 700, size);
-    while (ctx.measureText(title).width > W - PAD * 2 && size > 52) {
-      size -= 2;
+    const fitTitle = () => {
       spaced(ctx, -0.03 * size);
       setFont(ctx, 700, size);
+    };
+    fitTitle();
+    while (ctx.measureText(title).width > W - PAD * 2 && size > 52) {
+      size -= 2;
+      fitTitle();
     }
-    y += 18 + 80;
     ctx.fillStyle = C.text;
-    ctx.fillText(fitText(ctx, title, W - PAD * 2), PAD - 3, y);
+    ctx.fillText(fitText(ctx, title, W - PAD * 2), PAD - 3, 200);
     spaced(ctx, 0);
 
-    y += 50;
     setFont(ctx, 500, 28);
     ctx.fillStyle = C.muted;
-    const t = tops.length;
+    const f = data.favorites.length;
     ctx.fillText(
-      `${total} ${total === 1 ? "item" : "items"}${t ? ` · ${t} ${t === 1 ? "favorite" : "favorites"}` : ""}`,
+      `${total} ${total === 1 ? "item" : "items"}${f ? ` · ${f} ${f === 1 ? "favorite" : "favorites"}` : ""}`,
       PAD,
-      y
+      252
     );
 
+    // Content; if even the smallest size overflows, scale it down evenly.
+    const used = plan.bottom - CONTENT_TOP;
+    const room = CONTENT_BOTTOM - CONTENT_TOP;
+    ctx.save();
+    if (used > room) {
+      const k = room / used;
+      ctx.translate(W / 2, CONTENT_TOP);
+      ctx.scale(k, k);
+      ctx.translate(-W / 2, -CONTENT_TOP);
+    }
     plan.draw(ctx);
+    ctx.restore();
 
     // Footer
-    setFont(ctx, 600, 24);
+    setFont(ctx, 600, 26);
     ctx.fillStyle = C.green;
     ctx.textAlign = "center";
-    ctx.fillText("Merry Christmas", W / 2, height - 52);
+    ctx.fillText("Merry Christmas", W / 2, H - 54);
     ctx.textAlign = "left";
 
     return new Promise((resolve, reject) =>
@@ -544,66 +572,69 @@
     );
   }
 
-  // Favorites span the full width; categories are placed as rounded boxes
-  // into the shortest column. Returns { fits, draw }.
-  function layout(mctx, tops, rest, cols, s, top) {
+  // Up to three full-width boxes stacked: Favorites, the rest, Something else.
+  function layout(mctx, data, s, maxCols) {
     const fullW = W - PAD * 2;
     const gap = 24;
     const boxes = [];
-    let y = top;
-
-    if (tops.length) {
-      const box = measureBox(mctx, "Favorites", tops, fullW, s, { star: true });
-      boxes.push({ box, x: PAD, y });
-      y += box.h + gap;
+    if (data.favorites.length) {
+      boxes.push(measureListBox(mctx, {
+        title: "Favorites", star: true, items: data.favorites, bg: C.green, theme: THEME.fav, big: true,
+      }, fullW, s));
+    }
+    if (data.kinds.length) {
+      const title = data.favorites.length ? "Also on my list" : "My list";
+      boxes.push(measureMainBox(mctx, title, data.kinds, fullW, s, maxCols));
+    }
+    if (data.custom.length) {
+      boxes.push(measureListBox(mctx, {
+        title: "Something else", items: data.custom, bg: C.box, theme: THEME.light,
+      }, fullW, s));
     }
 
-    const colW = (fullW - gap * (cols - 1)) / cols;
-    const heights = new Array(cols).fill(y);
-    rest.forEach((g) => {
-      const box = measureBox(mctx, g.title, g.items, colW, s, {});
-      const col = heights.indexOf(Math.min(...heights));
-      boxes.push({ box, x: PAD + col * (colW + gap), y: heights[col] });
-      heights[col] += box.h + gap;
+    let y = CONTENT_TOP;
+    const placed = boxes.map((b) => {
+      const p = { b, y };
+      y += b.h + gap;
+      return p;
     });
-
     return {
-      bottom: Math.max(...heights) - gap,
-      draw: (ctx) => boxes.forEach((b) => b.box.draw(ctx, b.x, b.y)),
+      bottom: y - gap,
+      draw: (ctx) => placed.forEach((p) => p.b.draw(ctx, PAD, p.y)),
     };
   }
 
-  function measureBox(mctx, title, items, w, s, opts) {
-    const padX = 30 * s;
-    const padTop = 26 * s;
-    const padBottom = 8 * s;
-    const headerSize = 22 * s;
-    const headerH = headerSize + 8 * s;
-    const innerW = w - padX * 2;
-    const rows = items.map((it) => measureRow(mctx, it, innerW, s));
+  // A box of items, each with a small Want/Need pill.
+  function measureListBox(mctx, o, w, s) {
+    const padX = 32 * s;
+    const padTop = 30 * s;
+    const padBottom = 12 * s;
+    const headerSize = (o.star ? 24 : 22) * s;
+    const headerH = headerSize + 12 * s;
+    const rows = o.items.map((it) => measureRow(mctx, it, w - padX * 2, s, o.theme, { tag: true, big: o.big }));
     const h = padTop + headerH + rows.reduce((a, r) => a + r.h, 0) + padBottom;
 
     return {
       h,
       draw(ctx, x, y) {
-        roundRect(ctx, x, y, w, h, 28);
-        ctx.fillStyle = C.box;
+        roundRect(ctx, x, y, w, h, 32);
+        ctx.fillStyle = o.bg;
         ctx.fill();
 
         let hx = x + padX;
         const hy = y + padTop + headerSize * 0.8;
-        if (opts.star) {
+        if (o.star) {
           ctx.fillStyle = C.gold;
-          star(ctx, hx + headerSize * 0.45, hy - headerSize * 0.36, headerSize * 0.52);
-          hx += headerSize * 1.25;
+          star(ctx, hx + headerSize * 0.45, hy - headerSize * 0.36, headerSize * 0.55);
+          hx += headerSize * 1.3;
         }
-        setFont(ctx, 600, headerSize);
-        ctx.fillStyle = C.muted;
-        ctx.fillText(fitText(ctx, title, x + w - padX - hx), hx, hy);
+        setFont(ctx, o.star ? 700 : 600, headerSize);
+        ctx.fillStyle = o.star ? "#ffffff" : o.theme.muted;
+        ctx.fillText(o.title, hx, hy);
 
         let ry = y + padTop + headerH;
         rows.forEach((r, i) => {
-          if (i > 0) hairline(ctx, x + padX, x + w - padX, ry);
+          if (i > 0) hairline(ctx, x + padX, x + w - padX, ry, o.theme.hairline);
           r.draw(ctx, x + padX, ry);
           ry += r.h;
         });
@@ -611,58 +642,223 @@
     };
   }
 
-  function measureRow(mctx, it, w, s) {
-    const nameSize = 28 * s;
+  // The big gray box: Want / Need sections (labels only when both exist),
+  // each with category boxes in columns.
+  function measureMainBox(mctx, title, kinds, w, s, maxCols) {
+    const padX = 28 * s;
+    const padTop = 30 * s;
+    const padBottom = 28 * s;
+    const headerSize = 22 * s;
+    const headerH = headerSize + 18 * s;
+    const innerW = w - padX * 2;
+    const showLabels = kinds.length > 1;
+    const labelH = showLabels ? 36 * s + 16 * s : 0;
+    const gap = 16 * s;
+    const sectionGap = 26 * s;
+
+    const sections = kinds.map((k) => {
+      const cols = Math.min(maxCols, k.cats.length);
+      const colW = (innerW - gap * (cols - 1)) / cols;
+      const heights = new Array(cols).fill(0);
+      const cats = k.cats.map((cat) => {
+        const box = measureCatBox(mctx, cat, colW, s);
+        const col = heights.indexOf(Math.min(...heights));
+        const p = { box, dx: col * (colW + gap), dy: heights[col] };
+        heights[col] += box.h + gap;
+        return p;
+      });
+      const count = k.cats.reduce((a, c) => a + c.items.length, 0);
+      return { kind: k.kind, count, cats, h: labelH + Math.max(...heights) - gap };
+    });
+
+    const h = padTop + headerH + sections.reduce((a, sec) => a + sec.h, 0) +
+      sectionGap * (sections.length - 1) + padBottom;
+
+    return {
+      h,
+      draw(ctx, x, y) {
+        roundRect(ctx, x, y, w, h, 32);
+        ctx.fillStyle = C.box;
+        ctx.fill();
+
+        setFont(ctx, 600, headerSize);
+        ctx.fillStyle = C.muted;
+        ctx.fillText(title, x + padX, y + padTop + headerSize * 0.8);
+
+        let sy = y + padTop + headerH;
+        sections.forEach((sec) => {
+          if (showLabels) {
+            const label = sec.kind === "need" ? "Need" : "Want";
+            const pw = pill(ctx, x + padX, sy + 18 * s, label, 20 * s, 36 * s,
+              THEME.light[sec.kind]);
+            setFont(ctx, 500, 20 * s);
+            ctx.fillStyle = C.muted;
+            ctx.textBaseline = "middle";
+            ctx.fillText(`${sec.count} ${sec.count === 1 ? "item" : "items"}`, x + padX + pw + 12 * s, sy + 19 * s);
+            ctx.textBaseline = "alphabetic";
+          }
+          sec.cats.forEach((c) => c.box.draw(ctx, x + padX + c.dx, sy + labelH + c.dy));
+          sy += sec.h + sectionGap;
+        });
+      },
+    };
+  }
+
+  function measureCatBox(mctx, cat, w, s) {
+    const padX = 22 * s;
+    const padTop = 22 * s;
+    const padBottom = 6 * s;
+    const headerSize = 19 * s;
+    const headerH = headerSize + 6 * s;
+    const rows = cat.items.map((it) => measureRow(mctx, it, w - padX * 2, s, THEME.light, {}));
+    const h = padTop + headerH + rows.reduce((a, r) => a + r.h, 0) + padBottom;
+
+    return {
+      h,
+      draw(ctx, x, y) {
+        roundRect(ctx, x, y, w, h, 24);
+        ctx.fillStyle = C.inner;
+        ctx.fill();
+        setFont(ctx, 600, headerSize);
+        ctx.fillStyle = C.muted;
+        ctx.fillText(fitText(ctx, cat.title, w - padX * 2), x + padX, y + padTop + headerSize * 0.8);
+        let ry = y + padTop + headerH;
+        rows.forEach((r, i) => {
+          if (i > 0) hairline(ctx, x + padX, x + w - padX, ry, C.hairline);
+          r.draw(ctx, x + padX, ry);
+          ry += r.h;
+        });
+      },
+    };
+  }
+
+  // One item: name (up to 2 lines), optional note below; price and pill on the right.
+  function measureRow(mctx, it, w, s, theme, opt) {
+    const nameSize = (opt.big ? 30 : 25) * s;
     const nameLH = nameSize * 1.25;
-    const subSize = 21 * s;
-    const subLH = subSize * 1.45;
-    const padY = 14 * s;
+    const noteSize = (opt.big ? 21 : 19) * s;
+    const noteLH = noteSize * 1.45;
+    const padY = (opt.big ? 15 : 12) * s;
+    const pillSize = 16 * s;
+    const pillH = 28 * s;
+    const priceSize = (opt.big ? 24 : 21) * s;
 
+    const label = it.kind === "need" ? "Need" : "Want";
+    setFont(mctx, 600, pillSize);
+    const pillW = opt.tag ? mctx.measureText(label).width + 24 * s : 0;
     const price = formatPrice(it.price);
-    setFont(mctx, 500, 24 * s);
-    const priceW = price ? mctx.measureText(price).width + 20 * s : 0;
+    setFont(mctx, 500, priceSize);
+    const priceW = price ? mctx.measureText(price).width : 0;
+    const rightW = (pillW ? pillW + 14 * s : 0) + (priceW ? priceW + 16 * s : 0);
 
-    setFont(mctx, 500, nameSize);
-    const nameLines = wrap(mctx, it.name, w - priceW, 2);
-
-    const kind = it.kind === "need" ? "Need" : "Want";
+    setFont(mctx, opt.big ? 600 : 500, nameSize);
+    const nameLines = wrap(mctx, it.name, Math.max(40, w - rightW), 2);
     const note = (it.note || "").trim();
-    const h = padY * 2 + nameLines.length * nameLH + subLH;
+    const h = padY * 2 + nameLines.length * nameLH + (note ? noteLH : 0);
 
     return {
       h,
       draw(ctx, x, y) {
         const base = y + padY + nameSize * 0.92;
-        setFont(ctx, 500, nameSize);
-        ctx.fillStyle = C.text;
+        const mid = base - nameSize * 0.36;
+        setFont(ctx, opt.big ? 600 : 500, nameSize);
+        ctx.fillStyle = theme.text;
         nameLines.forEach((ln, i) => ctx.fillText(ln, x, base + i * nameLH));
 
+        let rx = x + w;
+        if (opt.tag) {
+          rx -= pillW;
+          pill(ctx, rx, mid, label, pillSize, pillH, theme[it.kind === "need" ? "need" : "want"], pillW);
+          rx -= 14 * s;
+        }
         if (price) {
-          setFont(ctx, 500, 24 * s);
-          ctx.fillStyle = C.muted;
+          setFont(ctx, 500, priceSize);
+          ctx.fillStyle = theme.muted;
           ctx.textAlign = "right";
-          ctx.fillText(price, x + w, base);
+          ctx.textBaseline = "middle";
+          ctx.fillText(price, rx, mid);
           ctx.textAlign = "left";
+          ctx.textBaseline = "alphabetic";
         }
 
-        // Secondary line: "Want · note"
-        const sy = base + (nameLines.length - 1) * nameLH + subLH;
-        setFont(ctx, 600, subSize);
-        ctx.fillStyle = it.kind === "need" ? C.green : C.amber;
-        ctx.fillText(kind, x, sy);
         if (note) {
-          const kw = ctx.measureText(kind).width;
-          setFont(ctx, 400, subSize);
-          ctx.fillStyle = C.muted;
-          ctx.fillText(fitText(ctx, ` · ${note}`, w - kw), x + kw, sy);
+          setFont(ctx, 400, noteSize);
+          ctx.fillStyle = theme.muted;
+          ctx.fillText(fitText(ctx, note, w), x, base + (nameLines.length - 1) * nameLH + noteLH);
         }
       },
     };
   }
 
-  function hairline(ctx, x1, x2, y) {
-    ctx.fillStyle = C.hairline;
+  // Rounded pill with white text, vertically centered on cy. Returns its width.
+  function pill(ctx, x, cy, text, size, h, fill, width) {
+    setFont(ctx, 600, size);
+    const w = width || ctx.measureText(text).width + size * 1.5;
+    roundRect(ctx, x, cy - h / 2, w, h, h / 2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x + w / 2, cy + size * 0.04);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    return w;
+  }
+
+  function hairline(ctx, x1, x2, y, color) {
+    ctx.fillStyle = color;
     ctx.fillRect(x1, y - 1, x2 - x1, 2);
+  }
+
+  function drawBow(ctx, cx, top) {
+    ctx.fillStyle = C.red;
+    [-1, 1].forEach((d) => {
+      ctx.beginPath();
+      ctx.ellipse(cx + d * 24, top + 12, 26, 13, d * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx + d * 4, top + 14);
+      ctx.lineTo(cx + d * 26, top + 58);
+      ctx.lineTo(cx + d * 12, top + 54);
+      ctx.lineTo(cx + d * 2, top + 64);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.fillStyle = C.bg;
+    [-1, 1].forEach((d) => {
+      ctx.beginPath();
+      ctx.ellipse(cx + d * 26, top + 12, 11, 4.5, d * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = C.redDark;
+    ctx.beginPath();
+    ctx.arc(cx, top + 12, 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function snowflake(ctx, cx, cy, r) {
+    ctx.save();
+    ctx.strokeStyle = C.flake;
+    ctx.lineWidth = Math.max(2, r / 6);
+    ctx.lineCap = "round";
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i;
+      const ex = cx + Math.cos(a) * r;
+      const ey = cy + Math.sin(a) * r;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(ex, ey);
+      // small branches
+      const bx = cx + Math.cos(a) * r * 0.6;
+      const by = cy + Math.sin(a) * r * 0.6;
+      [-0.6, 0.6].forEach((t) => {
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(a + t) * r * 0.32, by + Math.sin(a + t) * r * 0.32);
+      });
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function star(ctx, cx, cy, r) {
