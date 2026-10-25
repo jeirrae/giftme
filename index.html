@@ -27,7 +27,28 @@
       <div class="hero">
         <p class="eyebrow">Christmas <span class="js-year"></span></p>
         <h1>What's on your list this year?</h1>
-        <p class="lead">Tick everything you want or need. Tap ☆ to mark up to 5 top picks.</p>
+        <p class="lead">Pick the gifts you'd love to get. <button type="button" class="link-inline" id="tips-show" hidden>How it works</button></p>
+      </div>
+
+      <div class="card tips" id="tips">
+        <div class="tips-head">
+          <h2>How it works</h2>
+          <button type="button" class="tips-close" id="tips-close">Got it</button>
+        </div>
+        <ol class="tips-list">
+          <li>
+            <span class="tip-icon tip-check" aria-hidden="true"><span class="mini-check"></span></span>
+            <span><strong>Tap a gift</strong> to add it to your list.</span>
+          </li>
+          <li>
+            <span class="tip-icon tip-star" aria-hidden="true">★</span>
+            <span><strong>Tap the star</strong> on the ones you love most. You can pick up to 5 favorites.</span>
+          </li>
+          <li>
+            <span class="tip-icon tip-kind" aria-hidden="true">?</span>
+            <span><strong>Want or Need?</strong> Choose one, and add a note like your size or favorite color.</span>
+          </li>
+        </ol>
       </div>
 
       <div id="categories"></div>
@@ -107,7 +128,7 @@
     <div class="wrap bottombar-inner">
       <div class="tally">
         <strong id="tally-count">0 items</strong>
-        <span id="tally-top">0/5 top picks</span>
+        <span id="tally-top">0/5 favorites</span>
       </div>
       <button type="button" class="btn btn-primary" id="next-btn" disabled>Next</button>
     </div>

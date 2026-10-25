@@ -267,3 +267,30 @@ input::placeholder { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* How-it-works tips */
+.tips { margin-top: 20px; padding: 18px 18px 6px; }
+.tips-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.tips-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.tips-close {
+  border: 0; background: var(--fill); color: var(--text); cursor: pointer;
+  height: 32px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
+}
+.tips-list { list-style: none; margin: 0; padding: 0; }
+.tips-list li { display: flex; align-items: center; gap: 14px; padding: 10px 0; font-size: 16px; line-height: 1.35; }
+.tips-list strong { font-weight: 600; }
+.tip-icon {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 20px; font-weight: 700;
+}
+.tip-check { background: var(--green); }
+.mini-check {
+  width: 14px; height: 8px; margin-top: -3px;
+  border-left: 2.5px solid #fff; border-bottom: 2.5px solid #fff; transform: rotate(-45deg);
+}
+.tip-star { background: color-mix(in srgb, var(--gold) 18%, transparent); color: var(--gold); }
+.tip-kind { background: color-mix(in srgb, var(--amber) 14%, transparent); color: var(--amber); }
+.link-inline {
+  border: 0; background: none; padding: 0; cursor: pointer;
+  color: var(--green); font-weight: 600; font-size: inherit;
+}

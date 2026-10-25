@@ -107,7 +107,7 @@
             <span class="box" aria-hidden="true"></span>
             <span class="item-name"></span>
           </label>
-          <button type="button" class="star" aria-pressed="false" aria-label="Top pick">☆</button>
+          <button type="button" class="star" aria-pressed="false" aria-label="Favorite">☆</button>
           ${removable ? `<button type="button" class="icon-btn remove" aria-label="Remove item">×</button>` : ""}
         </div>
         <div class="details">
@@ -116,7 +116,7 @@
             <button type="button" data-kind="need" aria-pressed="false">Need</button>
           </div>
           <div class="detail-fields">
-            <input type="text" class="note" maxlength="80" placeholder="Note: size, color, brand…" aria-label="Note" />
+            <input type="text" class="note" maxlength="80" placeholder="Note (size, color…)" aria-label="Note" />
             <label class="price-field">
               <span>₱</span>
               <input type="text" class="price" inputmode="numeric" maxlength="9" placeholder="Price" aria-label="Price in pesos" />
@@ -180,7 +180,7 @@
     const t = topCount();
     $("#tally-count").textContent = `${n} ${n === 1 ? "item" : "items"}`;
     const top = $("#tally-top");
-    top.textContent = `${t}/${MAX_TOP} top picks`;
+    top.textContent = `${t}/${MAX_TOP} favorites`;
     top.classList.toggle("full", t >= MAX_TOP);
     $("#next-btn").disabled = n === 0;
 
@@ -204,7 +204,7 @@
       if (pick && pick.top) {
         pick.top = false;
       } else if (topCount() >= MAX_TOP) {
-        toast(`You can only have ${MAX_TOP} top picks.`);
+        toast(`You can pick up to ${MAX_TOP} favorites. Tap a star again to remove it.`);
         return;
       } else {
         state.picks[id] = Object.assign({ kind: "want", note: "", price: "" }, pick, { top: true });
@@ -330,7 +330,7 @@
     pickedGroups().forEach((g) => g.items.forEach((it) => it.top && tops.push(it)));
 
     const groups = [];
-    if (tops.length) groups.push({ title: "★ Top picks", items: tops });
+    if (tops.length) groups.push({ title: "★ Favorites", items: tops });
     pickedGroups().forEach((g) => {
       const rest = g.items.filter((it) => !it.top);
       if (rest.length) groups.push({ title: g.category.name, items: rest });
@@ -525,7 +525,7 @@
     ctx.fillStyle = C.muted;
     const t = tops.length;
     ctx.fillText(
-      `${total} ${total === 1 ? "item" : "items"}${t ? ` · ${t} top ${t === 1 ? "pick" : "picks"}` : ""}`,
+      `${total} ${total === 1 ? "item" : "items"}${t ? ` · ${t} ${t === 1 ? "favorite" : "favorites"}` : ""}`,
       PAD,
       y
     );
@@ -544,7 +544,7 @@
     );
   }
 
-  // Top picks span the full width; categories are placed as rounded boxes
+  // Favorites span the full width; categories are placed as rounded boxes
   // into the shortest column. Returns { fits, draw }.
   function layout(mctx, tops, rest, cols, s, top) {
     const fullW = W - PAD * 2;
@@ -553,7 +553,7 @@
     let y = top;
 
     if (tops.length) {
-      const box = measureBox(mctx, "Top picks", tops, fullW, s, { star: true });
+      const box = measureBox(mctx, "Favorites", tops, fullW, s, { star: true });
       boxes.push({ box, x: PAD, y });
       y += box.h + gap;
     }
@@ -790,6 +790,22 @@
       renderCategories();
       go("list");
     });
+
+    const TIPS_KEY = "giftme:tips-hidden";
+    const setTips = (hidden) => {
+      $("#tips").hidden = hidden;
+      $("#tips-show").hidden = !hidden;
+      try {
+        localStorage.setItem(TIPS_KEY, hidden ? "1" : "");
+      } catch (_) {}
+    };
+    let tipsHidden = false;
+    try {
+      tipsHidden = localStorage.getItem(TIPS_KEY) === "1";
+    } catch (_) {}
+    setTips(tipsHidden);
+    $("#tips-close").addEventListener("click", () => setTips(true));
+    $("#tips-show").addEventListener("click", () => setTips(false));
 
     window.addEventListener("hashchange", onHashChange);
     onHashChange();
