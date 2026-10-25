@@ -66,7 +66,7 @@
           styles: (Array.isArray(p.styles) ? p.styles : []).map(String).slice(0, 5),
           other: String(p.other || "").slice(0, 40),
           budget: BUDGET_IDS.includes(p.budget) ? p.budget : "",
-          color: String(p.color || "").slice(0, 12),
+          colors: (Array.isArray(p.colors) ? p.colors : p.color ? [p.color] : []).map(String).slice(0, 11),
           note: String(p.note || "").slice(0, 60),
         };
       });
@@ -191,7 +191,7 @@
   };
 
   function newPick(extra) {
-    return Object.assign({ kind: "want", top: false, styles: [], other: "", budget: "", color: "", note: "" }, extra);
+    return Object.assign({ kind: "want", top: false, styles: [], other: "", budget: "", colors: [], note: "" }, extra);
   }
 
   function itemDef(id) {
@@ -211,10 +211,15 @@
     const parts = (pick.styles || []).slice();
     if (pick.other && pick.other.trim()) parts.push(pick.other.trim());
     if (def.size && sizeText(def.size)) parts.push(sizeText(def.size));
-    const color = COLORS.find((c) => c.id === pick.color);
-    if (color) parts.push(color.name);
+    const colors = colorNames(pick);
+    if (colors) parts.push(colors);
     if (pick.note && pick.note.trim()) parts.push(pick.note.trim());
     return parts;
+  }
+
+  // "Black / White", in the order of the swatches.
+  function colorNames(pick) {
+    return COLORS.filter((c) => (pick.colors || []).includes(c.id)).map((c) => c.name).join(" / ");
   }
 
   function budgetLabel(id) {
@@ -414,9 +419,8 @@
     $$(".chip[data-budget]", li).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.budget === pick.budget)));
     const def = itemDef(id);
     if (def.size) renderSizeChips(li, def.size);
-    $$(".swatch", li).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.color === pick.color)));
-    const color = COLORS.find((c) => c.id === pick.color);
-    $(".color-name", li).textContent = color ? color.name : "";
+    $$(".swatch", li).forEach((b) => b.setAttribute("aria-pressed", String(pick.colors.includes(b.dataset.color))));
+    $(".color-name", li).textContent = colorNames(pick) || "Pick any";
     const note = $(".note", li);
     if (document.activeElement !== note) note.value = pick.note || "";
     updateMeta(li);
@@ -430,8 +434,8 @@
     if (pick && !openDetails.has(id)) {
       const def = itemDef(id);
       if (def.size && sizeText(def.size)) parts.push(sizeText(def.size));
-      const color = COLORS.find((c) => c.id === pick.color);
-      if (color) parts.push(color.name);
+      const colors = colorNames(pick);
+      if (colors) parts.push(colors);
       if (pick.note && pick.note.trim()) parts.push(pick.note.trim());
     }
     $(".item-meta", li).textContent = parts.join(" • ");
@@ -620,7 +624,7 @@
       return;
     } else if (t.closest(".swatch")) {
       const c = t.closest(".swatch").dataset.color;
-      pick.color = pick.color === c ? "" : c;
+      pick.colors = pick.colors.includes(c) ? pick.colors.filter((x) => x !== c) : pick.colors.concat(c);
     } else {
       return;
     }
@@ -926,7 +930,7 @@
   const PILL_SIZE = 16; // text size; every pill uses the same size
   const PILL_H = 28;
   const THEME = {
-    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.78)", hairline: "rgba(255,255,255,0.2)" },
+    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.92)", hairline: "rgba(255,255,255,0.2)" },
     light: { text: C.text, muted: C.muted, hairline: C.hairline },
   };
   const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
