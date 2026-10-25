@@ -13,7 +13,7 @@ A simple static site where each family member ticks off what they want or need f
 - Duplicate gifts are blocked, and a simple word filter keeps it family-friendly
 - Christmas countdown and automatic dark mode
 - Inside Messenger, tapping Download also shows how to save by pressing and holding the image
-- The image is a 1080×1620 (4:6) PNG: favorites in a green box, everything else grouped by Want/Need and category, and your own items in a separate box. Text resizes so every item fits. On phones, **Share** opens the share sheet so you can pick Messenger. On desktop, download it and send it in Messenger.
+- The image is a 1080×1920 PNG: favorites in a red box, everything else grouped by Want/Need and category, and your own items in a separate box. Text resizes so every item fits. On phones, **Share** opens the share sheet so you can pick Messenger. On desktop, download it and send it in Messenger.
 
 The Inter font is bundled in `fonts/` (SIL Open Font License), so nothing loads from outside the site.
 

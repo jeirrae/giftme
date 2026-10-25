@@ -900,9 +900,9 @@
     else toast({ emoji: "🎁", title: "Image saved", text: "Now send it to the family!" });
   }
 
-  // Canvas drawing — a fixed 1080×1620 (4:6) card that looks the same everywhere.
+  // Canvas drawing — a fixed 1080×1920 (9:16) card that looks the same everywhere.
   const W = 1080;
-  const H = 1620;
+  const H = 1920;
   const PAD = 64;
   const CONTENT_TOP = 300;
   const CONTENT_BOTTOM = H - 112;
@@ -963,24 +963,43 @@
     const data = cardData();
     const total = pickCount();
 
-    // Pick the largest text size that fits; shrink further only if needed.
+    // One column, so every box and row shares the same guide lines. Pick the
+    // largest text size that fits: short lists read bigger, long lists smaller.
     const attempts = [];
-    for (let s = 1.36; s >= 0.6; s -= 0.04) attempts.push({ s, cols: 2 });
-    for (let s = 0.62; s >= 0.5; s -= 0.04) attempts.push({ s, cols: 3 });
+    for (let s = 1.4; s >= 0.56; s -= 0.02) attempts.push({ s, cols: 1 });
+    const room = CONTENT_BOTTOM - CONTENT_TOP;
     let plan = null;
     for (const a of attempts) {
       plan = layout(ctx, data, a.s, a.cols);
-      if (plan.bottom <= CONTENT_BOTTOM) break;
+      if (plan.h <= room) break;
     }
+    // Still too tall at the smallest size: lay it out wider, then scale the
+    // whole stack down so it lands exactly on the page's guide lines again.
+    let k = 1;
+    if (plan.h > room) {
+      const last = attempts[attempts.length - 1];
+      for (let i = 0; i < 4; i++) {
+        k = Math.min(1, room / plan.h, k);
+        plan = layout(ctx, data, last.s, last.cols, (W - PAD * 2) / k);
+      }
+      k = Math.min(k, room / plan.h);
+    }
+    plan.bottom = CONTENT_TOP + plan.h * k;
 
     // Background, ribbon, snow
     ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, W, H);
     // Snowflakes sit in the side margins and corners, clear of all content.
     [
-      [W - 46, 46, 15], [W - 92, 96, 9], [28, 420, 10], [W - 28, 640, 11],
-      [28, 900, 9], [W - 28, 1160, 10], [28, 1380, 11], [W - 46, H - 40, 12], [46, H - 40, 12],
+      [W - 46, 46, 15], [W - 92, 96, 9], [28, H * 0.24, 10], [W - 28, H * 0.37, 11],
+      [28, H * 0.5, 9], [W - 28, H * 0.63, 10], [28, H * 0.76, 11], [W - 28, H * 0.88, 9],
+      [W - 46, H - 40, 12], [46, H - 40, 12],
     ].forEach(([x, y, r]) => snowflake(ctx, x, y, r));
+
+    // Short lists: center the title and boxes together so the page stays balanced.
+    const spare = Math.max(0, CONTENT_BOTTOM - plan.bottom);
+    ctx.save();
+    ctx.translate(0, Math.round(spare / 2));
 
     // Header: eyebrow → title → subtitle
     setFont(ctx, 600, 28);
@@ -1011,17 +1030,12 @@
       252
     );
 
-    // Content; if even the smallest size overflows, scale it down evenly.
-    const used = plan.bottom - CONTENT_TOP;
-    const room = CONTENT_BOTTOM - CONTENT_TOP;
+    // Content stack, scaled only when a very long list needs it.
     ctx.save();
-    if (used > room) {
-      const k = room / used;
-      ctx.translate(W / 2, CONTENT_TOP);
-      ctx.scale(k, k);
-      ctx.translate(-W / 2, -CONTENT_TOP);
-    }
+    ctx.translate(PAD, CONTENT_TOP);
+    ctx.scale(k, k);
     plan.draw(ctx);
+    ctx.restore();
     ctx.restore();
 
     // Footer
@@ -1040,8 +1054,9 @@
   }
 
   // Up to three full-width boxes stacked: Favorites, the rest, Something else.
-  function layout(mctx, data, s, maxCols) {
-    const fullW = W - PAD * 2;
+  // Boxes are measured at width fullW and drawn from (0, 0); the caller
+  // positions (and, for very long lists, scales) the whole stack.
+  function layout(mctx, data, s, maxCols, fullW = W - PAD * 2) {
     const gap = 24;
     const boxes = [];
     if (data.favorites.length) {
@@ -1059,15 +1074,15 @@
       }, fullW, s));
     }
 
-    let y = CONTENT_TOP;
+    let y = 0;
     const placed = boxes.map((b) => {
       const p = { b, y };
       y += b.h + gap;
       return p;
     });
     return {
-      bottom: y - gap,
-      draw: (ctx) => placed.forEach((p) => p.b.draw(ctx, PAD, p.y)),
+      h: y - gap,
+      draw: (ctx) => placed.forEach((p) => p.b.draw(ctx, 0, p.y)),
     };
   }
 
@@ -1079,7 +1094,7 @@
     const padX = 32 * s;
     const padTop = 30 * s;
     const padBottom = (o.inner ? 28 : 12) * s;
-    const headerSize = (o.star ? 24 : 22) * s;
+    const headerSize = Math.max(o.star ? 19 : 17, (o.star ? 24 : 22) * s);
     const headerH = headerSize + (o.inner ? 18 : 12) * s;
     const innerPad = o.inner ? 22 * s : 0;
     const innerY = o.inner ? 6 * s : 0;
@@ -1131,27 +1146,20 @@
     const padX = 32 * s; // same as the other boxes, so all pills share one right edge
     const padTop = 30 * s;
     const padBottom = 28 * s;
-    const headerSize = 22 * s;
+    const headerSize = Math.max(17, 22 * s);
     const headerH = headerSize + 18 * s;
     const innerW = w - padX * 2;
     const showLabels = kinds.length > 1;
-    const labelH = showLabels ? PILL_H * s + 16 * s : 0;
+    const pillSize = Math.max(13, PILL_SIZE * s); // same as the item pills
+    const pillH = Math.max(23, PILL_H * s);
+    const labelH = showLabels ? pillH + 16 * s : 0;
     const gap = 16 * s;
     const sectionGap = 26 * s;
 
     const sections = kinds.map((k) => {
-      const cols = Math.min(maxCols, k.cats.length);
-      const colW = (innerW - gap * (cols - 1)) / cols;
-      const heights = new Array(cols).fill(0);
-      const cats = k.cats.map((cat) => {
-        const box = measureCatBox(mctx, cat, colW, s);
-        const col = heights.indexOf(Math.min(...heights));
-        const p = { box, dx: col * (colW + gap), dy: heights[col] };
-        heights[col] += box.h + gap;
-        return p;
-      });
-      const count = k.cats.reduce((a, c) => a + c.items.length, 0);
-      return { kind: k.kind, count, cats, h: labelH + Math.max(...heights) - gap };
+      const box = measureSectionBox(mctx, k.cats, innerW, s);
+      const count = k.cats.reduce((n, c) => n + c.items.length, 0);
+      return { kind: k.kind, count, box, h: labelH + box.h };
     });
 
     const h = padTop + headerH + sections.reduce((a, sec) => a + sec.h, 0) +
@@ -1174,30 +1182,37 @@
         sections.forEach((sec) => {
           if (showLabels) {
             // Count on the left guide line, pill on the right one.
-            const cy = sy + (PILL_H * s) / 2;
-            const pw = kindPillWidth(ctx, sec.kind, PILL_SIZE * s);
-            kindPill(ctx, x + w - padX - pw, cy, sec.kind, PILL_SIZE * s, PILL_H * s);
-            setFont(ctx, 500, 19 * s);
+            const cy = sy + pillH / 2;
+            const pw = kindPillWidth(ctx, sec.kind, pillSize);
+            kindPill(ctx, x + w - padX - pw, cy, sec.kind, pillSize, pillH);
+            setFont(ctx, 500, Math.max(15, 19 * s));
             ctx.fillStyle = C.muted;
             ctx.textBaseline = "middle";
             ctx.fillText(`${sec.count} ${sec.count === 1 ? "item" : "items"}`, x + padX, cy);
             ctx.textBaseline = "alphabetic";
           }
-          sec.cats.forEach((c) => c.box.draw(ctx, x + padX + c.dx, sy + labelH + c.dy));
+          sec.box.draw(ctx, x + padX, sy + labelH);
           sy += sec.h + sectionGap;
         });
       },
     };
   }
 
-  function measureCatBox(mctx, cat, w, s) {
+  // One white box per Want / Need section; each category is a small
+  // sub-heading followed by its gifts.
+  function measureSectionBox(mctx, cats, w, s) {
     const padX = 22 * s;
-    const padTop = 22 * s;
+    const padTop = 20 * s;
     const padBottom = 6 * s;
-    const headerSize = 19 * s;
-    const headerH = headerSize + 6 * s;
-    const rows = cat.items.map((it) => measureRow(mctx, it, w - padX * 2, s, THEME.light, {}));
-    const h = padTop + headerH + rows.reduce((a, r) => a + r.h, 0) + padBottom;
+    const headSize = Math.max(14, 17 * s);
+    const headH = headSize + 4 * s;
+    const catGap = 18 * s;
+    const groups = cats.map((cat) => ({
+      title: cat.title,
+      rows: cat.items.map((it) => measureRow(mctx, it, w - padX * 2, s, THEME.light, {})),
+    }));
+    const h = padTop + padBottom + groups.reduce((n, g, i) =>
+      n + (i ? catGap : 0) + headH + g.rows.reduce((m, r) => m + r.h, 0), 0);
 
     return {
       h,
@@ -1205,14 +1220,21 @@
         roundRect(ctx, x, y, w, h, 24);
         ctx.fillStyle = C.inner;
         ctx.fill();
-        setFont(ctx, 600, headerSize);
-        ctx.fillStyle = C.muted;
-        ctx.fillText(fitText(ctx, cat.title, w - padX * 2), x + padX, y + padTop + headerSize * 0.8);
-        let ry = y + padTop + headerH;
-        rows.forEach((r, i) => {
-          if (i > 0) hairline(ctx, x + padX, x + w - padX, ry, C.hairline);
-          r.draw(ctx, x + padX, ry);
-          ry += r.h;
+        let gy = y + padTop;
+        groups.forEach((g, i) => {
+          if (i) {
+            hairline(ctx, x + padX, x + w - padX, gy + catGap / 2, C.hairline);
+            gy += catGap;
+          }
+          setFont(ctx, 600, headSize);
+          ctx.fillStyle = C.muted;
+          ctx.fillText(fitText(ctx, g.title, w - padX * 2), x + padX, gy + headSize * 0.8);
+          gy += headH;
+          g.rows.forEach((row, j) => {
+            if (j) hairline(ctx, x + padX, x + w - padX, gy, C.hairline);
+            row.draw(ctx, x + padX, gy);
+            gy += row.h;
+          });
         });
       },
     };
@@ -1220,14 +1242,14 @@
 
   // One item: name (up to 2 lines), optional note below; price and pill on the right.
   function measureRow(mctx, it, w, s, theme, opt) {
-    const nameSize = (opt.big ? 30 : 25) * s;
+    const nameSize = Math.max(opt.big ? 22 : 20, (opt.big ? 30 : 25) * s);
     const nameLH = nameSize * 1.25;
-    const metaSize = (opt.big ? 17 : 15) * s; // the tiny "Running • US 8" line
+    const metaSize = Math.max(14, (opt.big ? 17 : 15) * s); // the tiny "Running • US 8" line
     const metaLH = metaSize * 1.45;
     const padY = (opt.big ? 15 : 12) * s;
-    const pillSize = PILL_SIZE * s;
-    const pillH = PILL_H * s;
-    const priceSize = (opt.big ? 24 : 21) * s;
+    const pillSize = Math.max(13, PILL_SIZE * s);
+    const pillH = Math.max(23, PILL_H * s);
+    const priceSize = Math.max(17, (opt.big ? 24 : 21) * s);
 
     setFont(mctx, 600, pillSize);
     const kind = kindOf(it.kind);
