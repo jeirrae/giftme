@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Christmas Wishlist</title>
+  <meta name="description" content="Make your family Christmas wishlist and share it as an image." />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0e1512" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="brand"><span class="brand-dot" aria-hidden="true"></span>Family Wishlist</span>
+      <span class="countdown" id="countdown"></span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Step 1: checklist -->
+    <section class="step" id="step-list" data-step="list">
+      <div class="hero">
+        <p class="eyebrow">Christmas <span class="js-year"></span></p>
+        <h1>What's on your list this year?</h1>
+        <p class="lead">Tick everything you want or need. Tap ☆ to mark up to <strong>5 top picks</strong>, and add notes like size or color.</p>
+      </div>
+
+      <div id="categories"></div>
+
+      <div class="card custom-card">
+        <h2 class="cat-title"><span aria-hidden="true">✨</span> Something else?</h2>
+        <form id="custom-form" class="custom-form" autocomplete="off">
+          <label class="sr-only" for="custom-input">Add your own item</label>
+          <input id="custom-input" type="text" maxlength="60" placeholder="Add your own item…" />
+          <button type="submit" class="btn btn-soft">Add</button>
+        </form>
+        <ul class="items" id="custom-items"></ul>
+      </div>
+    </section>
+
+    <!-- Step 2: name -->
+    <section class="step" id="step-name" data-step="name" hidden>
+      <button class="back" type="button" data-go="list">← Back to list</button>
+      <div class="hero">
+        <p class="eyebrow">Almost done</p>
+        <h1>Who's this wishlist from?</h1>
+        <p class="lead">Your name or nickname will appear on your wishlist card.</p>
+      </div>
+      <form id="name-form" class="card name-card" autocomplete="off">
+        <label for="name-input" class="field-label">Name / Nickname</label>
+        <input id="name-input" type="text" maxlength="30" placeholder="e.g. Tita Joy" required />
+        <p class="error" id="name-error" hidden>Please enter your name or nickname.</p>
+        <button type="submit" class="btn btn-primary btn-block">Continue</button>
+      </form>
+    </section>
+
+    <!-- Step 3: review -->
+    <section class="step" id="step-review" data-step="review" hidden>
+      <div class="hero">
+        <p class="eyebrow">Review</p>
+        <h1>Are you sure about your choices?</h1>
+        <p class="lead">Here's <strong id="review-name"></strong>'s wishlist. Need to change something? Go back and edit.</p>
+      </div>
+      <div id="review-list"></div>
+      <div class="review-actions">
+        <button type="button" class="btn btn-ghost" data-go="list">Edit my list</button>
+        <button type="button" class="btn btn-ghost" data-go="name">Change name</button>
+        <button type="button" class="btn btn-primary" id="confirm-btn">Yes, I'm sure!</button>
+      </div>
+    </section>
+
+    <!-- Step 4: done -->
+    <section class="step" id="step-done" data-step="done" hidden>
+      <div class="hero center">
+        <p class="eyebrow">All set 🎄</p>
+        <h1>Your wishlist is ready!</h1>
+        <p class="lead">Save it to your device or send it to the family on Messenger.</p>
+      </div>
+      <div class="preview">
+        <img id="preview-img" alt="Your Christmas wishlist card" />
+        <div class="preview-loading" id="preview-loading">Wrapping your list…</div>
+      </div>
+      <div class="share-actions">
+        <button type="button" class="btn btn-primary btn-block" id="share-btn" hidden>
+          Share to Messenger
+        </button>
+        <button type="button" class="btn btn-secondary btn-block" id="download-btn">
+          Download image
+        </button>
+        <p class="hint" id="share-hint"></p>
+        <a class="btn btn-ghost btn-block" id="messenger-link" href="https://www.messenger.com/" target="_blank" rel="noopener" hidden>Open Messenger</a>
+      </div>
+      <div class="done-footer">
+        <button type="button" class="link" data-go="list">Edit my list</button>
+        <span aria-hidden="true">·</span>
+        <button type="button" class="link" id="reset-btn">Start a new list</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Sticky footer on step 1 -->
+  <div class="bottombar" id="bottombar">
+    <div class="wrap bottombar-inner">
+      <div class="tally">
+        <strong id="tally-count">0 items</strong>
+        <span id="tally-top">0/5 top picks</span>
+      </div>
+      <button type="button" class="btn btn-primary" id="next-btn" disabled>Next</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="items.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
