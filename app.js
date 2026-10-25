@@ -213,6 +213,18 @@
       .slice(0, 20);
   }
 
+  function hasBadNameChars(text) {
+    return /[^\p{L}\p{M}\s-]/u.test(String(text || ""));
+  }
+
+  function syncNameStep() {
+    const value = $("#name-input").value;
+    const bad = hasBadNameChars(value);
+    $("#name-hint").hidden = !bad;
+    $("#name-continue").disabled = bad || !formatName(value);
+    $("#name-error").hidden = true;
+  }
+
   // "jr" → "Jr", "MARY ANN" → "Mary Ann", "jo-ann" → "Jo-Ann".
   function formatName(text) {
     return cleanName(text)
@@ -908,6 +920,7 @@
     } else if (step === "name") {
       const input = $("#name-input");
       input.value = state.name;
+      syncNameStep();
       $("#name-error").hidden = true;
       setTimeout(() => input.focus(), 50);
     } else if (step === "review") {
@@ -1689,6 +1702,7 @@
 
     $("#name-form").addEventListener("submit", (e) => {
       e.preventDefault();
+      if (hasBadNameChars($("#name-input").value)) return syncNameStep();
       const name = formatName($("#name-input").value);
       const error = $("#name-error");
       if (!name || isRude(name)) {
@@ -1702,26 +1716,12 @@
       go("review");
     });
 
-    // Remove numbers and symbols as they're typed, and say why.
-    $("#name-input").addEventListener("input", (e) => {
-      const input = e.target;
-      const cleaned = cleanName(input.value);
-      const hint = $("#name-hint");
-      if (cleaned !== input.value) {
-        const pos = Math.max(0, (input.selectionStart || cleaned.length) - (input.value.length - cleaned.length));
-        input.value = cleaned;
-        try {
-          input.setSelectionRange(pos, pos);
-        } catch (_) {}
-        hint.classList.add("warn");
-        clearTimeout(input._hintTimer);
-        input._hintTimer = setTimeout(() => hint.classList.remove("warn"), 2500);
-      }
-      $("#name-error").hidden = true;
-    });
+    // Numbers and symbols aren't allowed: show a gentle caution and keep
+    // Continue disabled until the name is fixed (or while it's empty).
+    $("#name-input").addEventListener("input", syncNameStep);
     // Show the tidy version when leaving the box.
     $("#name-input").addEventListener("blur", (e) => {
-      e.target.value = formatName(e.target.value);
+      if (!hasBadNameChars(e.target.value)) e.target.value = formatName(e.target.value);
     });
 
     $("#confirm-btn").addEventListener("click", () => {

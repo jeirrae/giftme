@@ -532,5 +532,10 @@ body.modal-open { overflow: hidden; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-.name-hint { margin: -4px 4px 0; text-align: left; font-size: 13px; transition: color .2s var(--ease); }
-.name-hint.warn { color: var(--red); font-weight: 600; }
+.name-caution {
+  margin: -2px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: #fff6dc; color: #6b4a00; font-size: 13px; line-height: 1.4;
+  animation: ease-in-down .22s var(--ease);
+}
+.name-caution:not([hidden]) { display: flex; gap: 8px; align-items: flex-start; }
+@media (prefers-color-scheme: dark) { .name-caution { background: #3a2f10; color: #ffe08a; } }
