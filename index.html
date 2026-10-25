@@ -8,9 +8,7 @@
   <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -28,6 +26,25 @@
         <p class="eyebrow">Christmas <span class="js-year"></span></p>
         <h1>What's on your list this year?</h1>
         <p class="lead">Pick the gifts you'd love to get. <button type="button" class="link-inline" id="tips-show">How it works</button></p>
+      </div>
+
+      <div class="card inapp" id="inapp" hidden>
+        <strong class="inapp-title">Open this page in your browser first</strong>
+        <p class="inapp-text">You're inside Messenger, which can't save images. Open the page in your phone's browser before you start.</p>
+        <ol class="steps compact">
+          <li>
+            <span class="step-num" aria-hidden="true">1</span>
+            <span class="step-body"><span>Tap <strong>⋯</strong> at the top of the screen.</span></span>
+          </li>
+          <li>
+            <span class="step-num" aria-hidden="true">2</span>
+            <span class="step-body"><span>Tap <strong>Open in browser</strong> (it may say Safari or Chrome).</span></span>
+          </li>
+        </ol>
+        <div class="inapp-actions">
+          <button type="button" class="btn btn-soft" id="inapp-copy">Copy link</button>
+          <button type="button" class="link" id="inapp-stay">Continue here anyway</button>
+        </div>
       </div>
 
       <div id="categories"></div>
@@ -86,6 +103,19 @@
         <p class="eyebrow">All set</p>
         <h1>Your wishlist is ready</h1>
         <p class="lead">Save it or send it to the family on Messenger.</p>
+      </div>
+      <div class="card inapp" id="inapp-done" hidden>
+        <strong class="inapp-title">Saving inside Messenger</strong>
+        <ol class="steps compact">
+          <li>
+            <span class="step-num" aria-hidden="true">1</span>
+            <span class="step-body"><span>Press and hold the image below.</span></span>
+          </li>
+          <li>
+            <span class="step-num" aria-hidden="true">2</span>
+            <span class="step-body"><span>Tap <strong>Save image</strong>, then send it in your family chat.</span></span>
+          </li>
+        </ol>
       </div>
       <div class="preview">
         <img id="preview-img" alt="Your Christmas wishlist" />

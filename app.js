@@ -46,10 +46,23 @@
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const s = JSON.parse(raw);
+      const picks = {};
+      Object.keys(s.picks || {}).forEach((id) => {
+        const p = s.picks[id] || {};
+        const price = String(p.price || "").replace(/\D/g, "");
+        picks[id] = {
+          kind: p.kind === "need" ? "need" : "want",
+          note: String(p.note || "").slice(0, 80),
+          price: price && Number(price) > MAX_PRICE ? String(MAX_PRICE) : price,
+          top: !!p.top,
+        };
+      });
       return {
-        picks: s.picks || {},
-        custom: Array.isArray(s.custom) ? s.custom : [],
-        name: s.name || "",
+        picks,
+        custom: (Array.isArray(s.custom) ? s.custom : [])
+          .filter((c) => c && c.id && c.name)
+          .map((c) => ({ id: String(c.id), name: String(c.name).slice(0, 60) })),
+        name: String(s.name || "").slice(0, 30),
         confirmed: !!s.confirmed,
       };
     } catch (_) {
@@ -428,11 +441,21 @@
     return Object.keys(state.picks).find((id) => itemName(id) && isRude(state.picks[id].note || ""));
   }
 
+  // Re-checked before every step past the list, so a list edited by hand
+  // (or saved by an older version) can't sneak past the limits.
+  function listProblem() {
+    if (regularCount() > MAX_ITEMS) return `Please keep it to ${MAX_ITEMS} gifts plus ${MAX_TOP} favorites.`;
+    if (topCount() > MAX_TOP) return `Please keep it to ${MAX_TOP} favorites.`;
+    if (rudeNoteItem() || state.custom.some((c) => isRude(c.name))) return NAUGHTY;
+    return null;
+  }
+
   // ---------- Steps / routing ----------
 
   function allowedStep(step) {
+    if (step !== "list" && listProblem()) return "list";
     if (step === "name" && pickCount() === 0) return "list";
-    if (step === "review" && (pickCount() === 0 || !state.name.trim())) return pickCount() ? "name" : "list";
+    if (step === "review" && (pickCount() === 0 || !state.name.trim() || isRude(state.name))) return pickCount() ? "name" : "list";
     if (step === "done" && !state.confirmed) return allowedStep("review");
     return STEPS.includes(step) ? step : "list";
   }
@@ -471,6 +494,8 @@
     const step = allowedStep(requested);
     if (step !== requested) {
       history.replaceState(null, "", "#" + step);
+      const problem = listProblem();
+      if (problem && step === "list") toast(problem, 3200);
     }
     showStep(step);
   }
@@ -522,6 +547,10 @@
   let currentURL = null;
 
   async function renderDone() {
+    if (listProblem()) {
+      go("list");
+      return;
+    }
     const img = $("#preview-img");
     const loading = $("#preview-loading");
     loading.hidden = false;
@@ -563,9 +592,11 @@
       }
     }
     shareBtn.hidden = !canShareFile;
-    msgLink.hidden = canShareFile || !blob;
+    msgLink.hidden = canShareFile || !blob || IN_APP;
     hint.textContent = !blob
       ? ""
+      : IN_APP
+      ? "If Download doesn't work, follow the steps above."
       : canShareFile
       ? "Tap Share, then pick Messenger. You can also long-press the image to save it."
       : "Download the image, then send it to the family in Messenger.";
@@ -619,7 +650,7 @@
 
   async function ensureFonts() {
     if (!document.fonts || !document.fonts.load) return;
-    const loads = Promise.all([400, 500, 600, 700].map((w) => document.fonts.load(`${w} 30px ${SANS}`)));
+    const loads = Promise.all([400, 500, 600, 700].map((w) => document.fonts.load(`${w} 30px ${SANS}`, "Aa₱")));
     await Promise.race([loads, new Promise((r) => setTimeout(r, 2500))]);
   }
 
@@ -1097,10 +1128,40 @@
     $$(".js-year").forEach((el) => (el.textContent = christmasYear(now)));
   }
 
+  // Messenger / Facebook / Instagram open links in their own browser,
+  // where downloads often fail. Guide people to their real browser.
+  const IN_APP = /FBAN|FBAV|FB_IAB|FBIOS|Messenger|Instagram|Line\//i.test(navigator.userAgent);
+
+  function setupInApp() {
+    if (!IN_APP) return;
+    let dismissed = false;
+    try {
+      dismissed = sessionStorage.getItem("giftme:inapp-dismissed") === "1";
+    } catch (_) {}
+    $("#inapp").hidden = dismissed;
+    $("#inapp-done").hidden = false;
+    $("#inapp-stay").addEventListener("click", () => {
+      $("#inapp").hidden = true;
+      try {
+        sessionStorage.setItem("giftme:inapp-dismissed", "1");
+      } catch (_) {}
+    });
+    $("#inapp-copy").addEventListener("click", async () => {
+      const url = location.origin + location.pathname;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast("Link copied. Paste it into Safari or Chrome.");
+      } catch (_) {
+        window.prompt("Copy this link, then paste it into Safari or Chrome:", url);
+      }
+    });
+  }
+
   // ---------- Wire up ----------
 
   function init() {
     renderCountdown();
+    setupInApp();
     renderCategories();
 
     const main = $("main");
