@@ -192,64 +192,85 @@
     top.classList.toggle("full", t >= MAX_TOP);
     $("#next-btn").disabled = n === 0 || r > MAX_ITEMS;
 
-    // At the limit, unticked gifts are locked (favorites can still be starred).
-    const full = r >= MAX_ITEMS;
-    $$(".item").forEach((li) => li.classList.toggle("is-locked", full && !state.picks[li.dataset.id]));
-    $("#custom-form").classList.toggle("is-locked", full);
-    if (!full || r > MAX_ITEMS) limitWarned = false;
+    // At a limit, the things that would go over it are locked.
+    const giftsFull = r >= MAX_ITEMS;
+    const starsFull = t >= MAX_TOP;
+    $$(".item").forEach((li) => li.classList.toggle("is-locked", giftsFull && !state.picks[li.dataset.id]));
+    $("#custom-form").classList.toggle("is-locked", giftsFull);
+    $$(".star").forEach((star) => {
+      const locked = starsFull && star.getAttribute("aria-pressed") !== "true";
+      star.classList.toggle("is-locked", locked);
+      star.setAttribute("aria-disabled", String(locked));
+    });
+    if (warned === "gifts" && !giftsFull) warned = null;
+    if (warned === "stars" && !starsFull) warned = null;
     renderLimit();
 
-    // Disable stars that can't be pressed anymore.
-    $$(".star").forEach((s) => {
-      s.disabled = t >= MAX_TOP && s.getAttribute("aria-pressed") !== "true";
-    });
     $$(".group[data-cat]").forEach((group) => {
       const c = $$(".item.is-checked", group).length;
       $(".cat-count", group).textContent = c ? `${c} picked` : "";
     });
   }
 
-  // Banner above the bottom bar: yellow at the limit, red when someone
-  // tries to add more (or a saved list is somehow over).
-  let limitWarned = false;
+  // Banner above the bottom bar: yellow when a limit is reached, red (with a
+  // little shake) when someone tries to go past it.
+  let warned = null; // null | "gifts" | "stars"
   let shakeTimer;
+  let calmTimer;
 
   function renderLimit() {
     const r = regularCount();
+    const t = topCount();
     const box = $("#limit");
-    if (r < MAX_ITEMS) {
-      box.hidden = true;
-      return;
-    }
     const over = r > MAX_ITEMS;
-    const angry = over || limitWarned;
-    box.hidden = false;
-    box.className = "limit " + (angry ? "over" : "full");
-    $("#limit-emoji").textContent = angry ? "🎅" : "🛷";
-    $("#limit-title").textContent = angry ? "Ho ho ho… hold on!" : `That's ${MAX_ITEMS}, the max!`;
-    const extra = r - MAX_ITEMS;
-    $("#limit-text").textContent = !angry
-      ? "Santa's sleigh is officially full. You can still swap gifts around."
-      : over
-      ? `You're asking for too much! Santa's back hurts already. Uncheck ${extra} ${extra === 1 ? "gift" : "gifts"} to continue.`
-      : "You're asking for too much! Santa's back hurts already. Uncheck a gift to add a new one.";
+    const giftsFull = r >= MAX_ITEMS;
+    const starsFull = t >= MAX_TOP;
+    let msg = null;
+
+    if (over) {
+      const extra = r - MAX_ITEMS;
+      msg = ["over", "🎅", "Ho ho ho… hold on!",
+        `You're asking for too much! Santa's back hurts already. Uncheck ${extra} ${extra === 1 ? "gift" : "gifts"} to continue.`];
+    } else if (warned === "gifts") {
+      msg = ["over", "🎅", "Ho ho ho… hold on!",
+        "You're asking for too much! Santa's back hurts already. Uncheck a gift to add a new one."];
+    } else if (warned === "stars") {
+      msg = ["over", "🧝", "Whoa there, superstar!",
+        `Only ${MAX_TOP} favorites, or the elves get confused! Tap a gold star to remove it first.`];
+    } else if (giftsFull && starsFull) {
+      msg = ["full", "🛷", "That's the max!",
+        `${MAX_ITEMS} gifts and ${MAX_TOP} favorites. Santa's sleigh is officially full.`];
+    } else if (giftsFull) {
+      msg = ["full", "🛷", `That's ${MAX_ITEMS}, the max!`,
+        "Santa's sleigh is officially full. You can still swap gifts around."];
+    } else if (starsFull) {
+      msg = ["full", "⭐", `That's ${MAX_TOP} favorites, the max!`,
+        "Your top picks are locked in. Tap a gold star to swap one out."];
+    }
+
+    box.hidden = !msg;
+    if (!msg) return;
+    box.classList.toggle("over", msg[0] === "over");
+    box.classList.toggle("full", msg[0] === "full");
+    $("#limit-emoji").textContent = msg[1];
+    $("#limit-title").textContent = msg[2];
+    $("#limit-text").textContent = msg[3];
   }
 
-  function warnLimit() {
-    limitWarned = true;
+  function warnLimit(kind) {
+    warned = kind;
     renderLimit();
     const box = $("#limit");
     box.classList.remove("shake");
     void box.offsetWidth; // restart the animation
     box.classList.add("shake");
     clearTimeout(shakeTimer);
-    shakeTimer = setTimeout(() => {
-      box.classList.remove("shake");
-      setTimeout(() => {
-        limitWarned = false;
-        renderLimit();
-      }, 3500);
-    }, 500);
+    clearTimeout(calmTimer);
+    shakeTimer = setTimeout(() => box.classList.remove("shake"), 500);
+    calmTimer = setTimeout(() => {
+      warned = null;
+      renderLimit();
+    }, 4000);
   }
 
   function onListClick(e) {
@@ -261,12 +282,12 @@
       const pick = state.picks[id];
       if (pick && pick.top) {
         if (regularCount() >= MAX_ITEMS) {
-          warnLimit();
+          warnLimit("gifts");
           return;
         }
         pick.top = false;
       } else if (topCount() >= MAX_TOP) {
-        toast(`You can pick up to ${MAX_TOP} favorites. Tap a star again to remove it.`);
+        warnLimit("stars");
         return;
       } else {
         state.picks[id] = Object.assign({ kind: "want", note: "", price: "" }, pick, { top: true });
@@ -299,7 +320,7 @@
     if (e.target.checked) {
       if (!state.picks[id] && regularCount() >= MAX_ITEMS) {
         e.target.checked = false;
-        warnLimit();
+        warnLimit("gifts");
         return;
       }
       state.picks[id] = state.picks[id] || { kind: "want", note: "", price: "", top: false };
@@ -332,7 +353,7 @@
     const name = input.value.trim().replace(/\s+/g, " ");
     if (!name) return;
     if (regularCount() >= MAX_ITEMS) {
-      warnLimit();
+      warnLimit("gifts");
       return;
     }
     const id = "custom-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
