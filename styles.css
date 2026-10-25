@@ -367,9 +367,6 @@ input::placeholder { color: var(--muted); }
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
-}
 
 /* Tutorial pop-up */
 .tips-list { list-style: none; margin: 0; padding: 0; }
@@ -497,7 +494,7 @@ body.modal-open { overflow: hidden; }
 .action:active { transform: scale(.98); }
 .action:disabled { opacity: .45; cursor: not-allowed; }
 .action:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.preview-hint { max-width: 400px; margin: 12px auto 0; }
+.preview-hint { max-width: 400px; margin: 12px auto 0; font-size: 12px; line-height: 1.45; }
 .done-footer { display: flex; justify-content: center; margin: 16px 0 48px; }
 
 /* Sort toggle above the categories */
@@ -510,3 +507,27 @@ body.modal-open { overflow: hidden; }
 }
 .sort-toggle::before { content: "⇅"; color: var(--green); font-size: 15px; }
 .sort-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* Smooth, gentle motion */
+:root { --ease: cubic-bezier(.25, .1, .25, 1); }
+.btn, .action, .chip, .swatch, .seg button, .mini-seg button, .details-btn,
+.sort-toggle, .star, .cat-head, .box, .icon-btn, .tips-close, .modal-x {
+  transition: transform .18s var(--ease), background-color .2s var(--ease),
+    color .2s var(--ease), border-color .2s var(--ease), box-shadow .2s var(--ease), opacity .2s var(--ease);
+}
+.btn:active, .action:active, .chip:active, .swatch:active, .seg button:active,
+.mini-seg button:active, .details-btn:active, .sort-toggle:active, .cat-head:active { transform: scale(.97); }
+.star:active, .check:active .box { transform: scale(.88); }
+.cat-head:active { transform: scale(.99); }
+.chev { transition: transform .25s var(--ease); }
+@keyframes ease-in-down { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes ease-in { from { opacity: 0; } to { opacity: 1; } }
+.cat-body:not([hidden]) { animation: ease-in-down .28s var(--ease); }
+.item.is-checked .details { animation: ease-in-down .24s var(--ease); }
+.more:not([hidden]), .other-input:not([hidden]) { animation: ease-in-down .22s var(--ease); }
+.step:not([hidden]) { animation: ease-in .3s var(--ease); }
+.kind-hint, .item-meta { transition: opacity .2s var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
