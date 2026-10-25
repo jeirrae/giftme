@@ -387,10 +387,38 @@
       </section>`;
   }
 
+  // Gift order inside each category: "popular" (the order in items.js, most
+  // wanted first) or "az". Remembered on this device only.
+  const SORT_KEY = "giftme:sort";
+  let sortMode = "popular";
+  try {
+    if (localStorage.getItem(SORT_KEY) === "az") sortMode = "az";
+  } catch (_) {}
+
+  function sortedItems(cat) {
+    if (sortMode !== "az") return cat.items;
+    return cat.items.slice().sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function syncSortToggle() {
+    const btn = $("#sort-toggle");
+    btn.textContent = sortMode === "az" ? "A–Z" : "Most wanted";
+    btn.setAttribute("aria-label", `Sort gifts: ${btn.textContent}. Tap to change.`);
+  }
+
+  function toggleSort() {
+    sortMode = sortMode === "az" ? "popular" : "az";
+    try {
+      localStorage.setItem(SORT_KEY, sortMode);
+    } catch (_) {}
+    syncSortToggle();
+    renderCategories();
+  }
+
   function renderCategories() {
     const host = $("#categories");
     host.innerHTML = CATEGORIES.map((cat) =>
-      catHTML(cat.id, cat.name, `<ul class="items">${cat.items.map((it) => itemHTML(it.id, it.name)).join("")}</ul>`)
+      catHTML(cat.id, cat.name, `<ul class="items">${sortedItems(cat).map((it) => itemHTML(it.id, it.name)).join("")}</ul>`)
     ).join("") + catHTML("custom", "Something else", `
         <form id="custom-form" class="custom-form" autocomplete="off">
           <label class="sr-only" for="custom-input">Add your own item</label>
@@ -1101,14 +1129,18 @@
     ].forEach(([x, y, r]) => snowflake(ctx, x, y, r));
 
     // Short lists: center the title and boxes together so the page stays balanced.
+    // "Christmas 2026" always sits at the top center.
+    setFont(ctx, 600, 28);
+    ctx.fillStyle = C.red;
+    ctx.textAlign = "center";
+    ctx.fillText(`Christmas ${christmasYear()}`, W / 2, 104);
+    ctx.textAlign = "left";
+
     const spare = Math.max(0, CONTENT_BOTTOM - plan.bottom);
     ctx.save();
     ctx.translate(0, Math.round(spare / 2));
 
-    // Header: eyebrow → title → subtitle
-    setFont(ctx, 600, 28);
-    ctx.fillStyle = C.red;
-    ctx.fillText(`Christmas ${christmasYear()}`, PAD, 104);
+    // Header: title → subtitle
 
     const title = `${possessive(state.name.trim())} Wishlist`;
     let size = 80;
@@ -1648,6 +1680,8 @@
     });
 
     $("#share-btn").addEventListener("click", shareImage);
+    $("#sort-toggle").addEventListener("click", toggleSort);
+    syncSortToggle();
     $("#download-btn").addEventListener("click", () => downloadImage());
     $("#reset-btn").addEventListener("click", () => {
       if (!confirm("Clear this list and start a new one?")) return;

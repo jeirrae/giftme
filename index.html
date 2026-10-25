@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=202610251610" />
+  <link rel="stylesheet" href="styles.css?v=202610251620" />
 </head>
 <body>
   <header class="topbar">
@@ -28,6 +28,10 @@
         <p class="lead">Tap a category to see its gifts. <button type="button" class="link-inline" id="tips-show">How it works</button></p>
       </div>
 
+      <div class="list-tools">
+        <span class="list-tools-label">Sort gifts</span>
+        <button type="button" class="sort-toggle" id="sort-toggle" aria-live="polite">Most wanted</button>
+      </div>
       <div id="categories"></div>
 
     </section>
@@ -74,19 +78,18 @@
       <div class="hero center">
         <p class="eyebrow">All set</p>
         <h1>Your wishlist is ready</h1>
-        <p class="lead">Share it with your family.</p>
       </div>
       <div class="action-grid">
-        <button type="button" class="action action-primary" id="download-btn">
+        <button type="button" class="action action-green" id="download-btn">
           <strong>Download</strong><span>Save to your phone</span>
         </button>
-        <button type="button" class="action action-green" id="share-btn">
+        <button type="button" class="action action-yellow" id="share-btn">
           <strong>Share</strong><span>Send on Messenger</span>
         </button>
-        <button type="button" class="action" data-go="list">
+        <button type="button" class="action action-small" data-go="list">
           <strong>Edit list</strong><span>Change your gifts</span>
         </button>
-        <button type="button" class="action" id="edit-link-btn">
+        <button type="button" class="action action-small" id="edit-link-btn">
           <strong>Copy edit link</strong><span>Edit it again later</span>
         </button>
       </div>
@@ -184,7 +187,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="items.js?v=202610251610"></script>
-  <script src="app.js?v=202610251610"></script>
+  <script src="items.js?v=202610251620"></script>
+  <script src="app.js?v=202610251620"></script>
 </body>
 </html>
