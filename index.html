@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Christmas Wishlist</title>
   <meta name="description" content="Make your family Christmas wishlist and share it as an image." />
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0e1512" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -27,33 +27,37 @@
       <div class="hero">
         <p class="eyebrow">Christmas <span class="js-year"></span></p>
         <h1>What's on your list this year?</h1>
-        <p class="lead">Tick everything you want or need. Tap ☆ to mark up to <strong>5 top picks</strong>, and add notes like size or color.</p>
+        <p class="lead">Tick everything you want or need. Tap ☆ to mark up to 5 top picks.</p>
       </div>
 
       <div id="categories"></div>
 
-      <div class="card custom-card">
-        <h2 class="cat-title"><span aria-hidden="true">✨</span> Something else?</h2>
-        <form id="custom-form" class="custom-form" autocomplete="off">
-          <label class="sr-only" for="custom-input">Add your own item</label>
-          <input id="custom-input" type="text" maxlength="60" placeholder="Add your own item…" />
-          <button type="submit" class="btn btn-soft">Add</button>
-        </form>
-        <ul class="items" id="custom-items"></ul>
-      </div>
+      <section class="group">
+        <h2 class="group-title">Something else?</h2>
+        <div class="card">
+          <form id="custom-form" class="custom-form" autocomplete="off">
+            <label class="sr-only" for="custom-input">Add your own item</label>
+            <input id="custom-input" type="text" maxlength="60" placeholder="Add your own item" />
+            <button type="submit" class="btn btn-soft">Add</button>
+          </form>
+          <ul class="items" id="custom-items"></ul>
+        </div>
+      </section>
     </section>
 
     <!-- Step 2: name -->
     <section class="step" id="step-name" data-step="name" hidden>
-      <button class="back" type="button" data-go="list">← Back to list</button>
+      <button class="back" type="button" data-go="list">‹ Back</button>
       <div class="hero">
         <p class="eyebrow">Almost done</p>
         <h1>Who's this wishlist from?</h1>
-        <p class="lead">Your name or nickname will appear on your wishlist card.</p>
+        <p class="lead">Your name or nickname will appear on your wishlist.</p>
       </div>
-      <form id="name-form" class="card name-card" autocomplete="off">
-        <label for="name-input" class="field-label">Name / Nickname</label>
-        <input id="name-input" type="text" maxlength="30" placeholder="e.g. Tita Joy" required />
+      <form id="name-form" class="name-form" autocomplete="off">
+        <div class="card name-card">
+          <label for="name-input" class="sr-only">Name or nickname</label>
+          <input id="name-input" type="text" maxlength="30" placeholder="Name or nickname" required />
+        </div>
         <p class="error" id="name-error" hidden>Please enter your name or nickname.</p>
         <button type="submit" class="btn btn-primary btn-block">Continue</button>
       </form>
@@ -67,37 +71,32 @@
         <p class="lead">Here's <strong id="review-name"></strong>'s wishlist. Need to change something? Go back and edit.</p>
       </div>
       <div id="review-list"></div>
-      <div class="review-actions">
-        <button type="button" class="btn btn-ghost" data-go="list">Edit my list</button>
-        <button type="button" class="btn btn-ghost" data-go="name">Change name</button>
-        <button type="button" class="btn btn-primary" id="confirm-btn">Yes, I'm sure!</button>
+      <div class="stack-actions">
+        <button type="button" class="btn btn-primary btn-block" id="confirm-btn">Yes, I'm sure</button>
+        <div class="pair">
+          <button type="button" class="btn btn-plain" data-go="list">Edit list</button>
+          <button type="button" class="btn btn-plain" data-go="name">Change name</button>
+        </div>
       </div>
     </section>
 
     <!-- Step 4: done -->
     <section class="step" id="step-done" data-step="done" hidden>
       <div class="hero center">
-        <p class="eyebrow">All set 🎄</p>
-        <h1>Your wishlist is ready!</h1>
-        <p class="lead">Save it to your device or send it to the family on Messenger.</p>
+        <p class="eyebrow">All set</p>
+        <h1>Your wishlist is ready</h1>
+        <p class="lead">Save it or send it to the family on Messenger.</p>
       </div>
       <div class="preview">
-        <img id="preview-img" alt="Your Christmas wishlist card" />
+        <img id="preview-img" alt="Your Christmas wishlist" />
         <div class="preview-loading" id="preview-loading">Wrapping your list…</div>
       </div>
-      <div class="share-actions">
-        <button type="button" class="btn btn-primary btn-block" id="share-btn" hidden>
-          Share to Messenger
-        </button>
-        <button type="button" class="btn btn-secondary btn-block" id="download-btn">
-          Download image
-        </button>
+      <div class="stack-actions narrow">
+        <button type="button" class="btn btn-primary btn-block" id="share-btn" hidden>Share to Messenger</button>
+        <button type="button" class="btn btn-secondary btn-block" id="download-btn">Download image</button>
+        <a class="btn btn-plain btn-block" id="messenger-link" href="https://www.messenger.com/" target="_blank" rel="noopener" hidden>Open Messenger</a>
         <p class="hint" id="share-hint"></p>
-        <a class="btn btn-ghost btn-block" id="messenger-link" href="https://www.messenger.com/" target="_blank" rel="noopener" hidden>Open Messenger</a>
-      </div>
-      <div class="done-footer">
-        <button type="button" class="link" data-go="list">Edit my list</button>
-        <span aria-hidden="true">·</span>
+        <button type="button" class="btn btn-plain btn-block" data-go="list">Edit my list</button>
         <button type="button" class="link" id="reset-btn">Start a new list</button>
       </div>
     </section>

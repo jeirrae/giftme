@@ -130,11 +130,10 @@
     const host = $("#categories");
     host.innerHTML = CATEGORIES.map(
       (cat) => `
-      <div class="card" data-cat="${cat.id}">
-        <h2 class="cat-title"><span aria-hidden="true">${cat.emoji || ""}</span> ${escapeHTML(cat.name)}
-          <span class="cat-count"></span></h2>
-        <ul class="items">${cat.items.map((it) => itemHTML(it.id, it.name)).join("")}</ul>
-      </div>`
+      <section class="group" data-cat="${cat.id}">
+        <h2 class="group-title">${escapeHTML(cat.name)} <span class="cat-count"></span></h2>
+        <ul class="card items">${cat.items.map((it) => itemHTML(it.id, it.name)).join("")}</ul>
+      </section>`
     ).join("");
     // Set names via textContent so preset/custom text is never parsed as HTML.
     CATEGORIES.forEach((cat) =>
@@ -189,9 +188,9 @@
     $$(".star").forEach((s) => {
       s.disabled = t >= MAX_TOP && s.getAttribute("aria-pressed") !== "true";
     });
-    $$(".card[data-cat]").forEach((card) => {
-      const c = $$(".item.is-checked", card).length;
-      $(".cat-count", card).textContent = c ? `${c} picked` : "";
+    $$(".group[data-cat]").forEach((group) => {
+      const c = $$(".item.is-checked", group).length;
+      $(".cat-count", group).textContent = c ? `${c} picked` : "";
     });
   }
 
@@ -334,29 +333,31 @@
     if (tops.length) groups.push({ title: "★ Top picks", items: tops });
     pickedGroups().forEach((g) => {
       const rest = g.items.filter((it) => !it.top);
-      if (rest.length) groups.push({ title: `${g.category.emoji || ""} ${g.category.name}`, items: rest });
+      if (rest.length) groups.push({ title: g.category.name, items: rest });
     });
 
     groups.forEach((g) => {
-      const card = document.createElement("div");
-      card.className = "card review-group";
+      const section = document.createElement("section");
+      section.className = "group";
       const h = document.createElement("h2");
+      h.className = "group-title";
       h.textContent = g.title;
       const ul = document.createElement("ul");
+      ul.className = "card items";
       g.items.forEach((it) => {
         const li = document.createElement("li");
-        li.innerHTML = `<span class="tag tag-${it.kind}">${it.kind}</span>
-          <span class="r-main"><span class="r-name"></span><span class="r-note"></span></span>
+        li.className = "r-item";
+        li.innerHTML = `<span class="r-main"><span class="r-name"></span>
+          <span class="r-sub"><span class="kind kind-${it.kind}">${it.kind === "need" ? "Need" : "Want"}</span><span class="r-note"></span></span></span>
           <span class="r-price"></span>`;
         $(".r-name", li).textContent = it.name;
-        const note = $(".r-note", li);
-        if (it.note && it.note.trim()) note.textContent = it.note.trim();
-        else note.remove();
+        const note = (it.note || "").trim();
+        $(".r-note", li).textContent = note ? ` · ${note}` : "";
         $(".r-price", li).textContent = formatPrice(it.price);
         ul.appendChild(li);
       });
-      card.append(h, ul);
-      host.appendChild(card);
+      section.append(h, ul);
+      host.appendChild(section);
     });
   }
 
@@ -369,6 +370,8 @@
     const img = $("#preview-img");
     const loading = $("#preview-loading");
     loading.hidden = false;
+    loading.textContent = "Wrapping your list…";
+    $(".preview").style.aspectRatio = "";
     img.removeAttribute("src");
     setupShareUI(null);
 
@@ -377,6 +380,7 @@
       currentBlob = blob;
       if (currentURL) URL.revokeObjectURL(currentURL);
       currentURL = URL.createObjectURL(blob);
+      img.onload = () => $(".preview").style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
       img.src = currentURL;
       loading.hidden = true;
       setupShareUI(blob);
@@ -437,30 +441,23 @@
   // Canvas drawing — always a light card so it looks the same everywhere.
   const W = 1080;
   const H = 1350;
-  const PAD = 80;
+  const PAD = 72;
   const C = {
     bg: "#ffffff",
-    text: "#17201b",
-    muted: "#7a847e",
-    line: "#eceeea",
-    red: "#c8202f",
-    redSoft: "#fdecee",
-    green: "#1d6b45",
-    greenSoft: "#e8f3ed",
-    gold: "#e0a526",
-    topBg: "#fff8ec",
+    box: "#f5f5f7",
+    text: "#1d1d1f",
+    muted: "#86868b",
+    hairline: "#e3e3e8",
+    red: "#c8102e",
+    green: "#1e7b4e",
+    amber: "#b07400",
+    gold: "#f5b300",
   };
-  const SANS = '"Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-  const SERIF = 'Fraunces, Georgia, serif';
+  const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
   async function ensureFonts() {
     if (!document.fonts || !document.fonts.load) return;
-    const loads = Promise.all([
-      document.fonts.load(`700 80px ${SERIF}`),
-      document.fonts.load(`700 30px ${SANS}`),
-      document.fonts.load(`600 30px ${SANS}`),
-      document.fonts.load(`500 30px ${SANS}`),
-    ]);
+    const loads = Promise.all([400, 500, 600, 700].map((w) => document.fonts.load(`${w} 30px ${SANS}`)));
     await Promise.race([loads, new Promise((r) => setTimeout(r, 2500))]);
   }
 
@@ -469,46 +466,62 @@
     const canvas = document.createElement("canvas");
     canvas.width = W;
     canvas.height = H;
-    const ctx = canvas.getContext("2d");
+    let ctx = canvas.getContext("2d");
 
     const groups = pickedGroups();
     const tops = [];
     groups.forEach((g) => g.items.forEach((it) => it.top && tops.push(it)));
     const rest = groups
-      .map((g) => ({ category: g.category, items: g.items.filter((it) => !it.top) }))
+      .map((g) => ({ title: g.category.name, items: g.items.filter((it) => !it.top) }))
       .filter((g) => g.items.length);
     const total = pickCount();
 
-    // Background + accents
-    ctx.fillStyle = C.bg;
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = C.red;
-    ctx.fillRect(0, 0, W / 2, 12);
-    ctx.fillStyle = C.green;
-    ctx.fillRect(W / 2, 0, W / 2, 12);
-    drawTree(ctx, W - PAD - 70, 96, 1);
+    const top = 300;
+    const footerH = 110;
 
-    // Header
-    let y = 128;
-    setFont(ctx, 700, 24, SANS);
+    // Fit into 1080×1350: one column, then two, shrinking a little.
+    // Long lists never get cut off; the image grows taller instead.
+    const attempts = [];
+    for (let s = 1; s >= 0.8; s -= 0.05) attempts.push({ cols: 1, s });
+    for (let s = 0.94; s >= 0.78; s -= 0.04) attempts.push({ cols: 2, s });
+    let plan = null;
+    for (const a of attempts) {
+      plan = layout(ctx, tops, rest, a.cols, a.s, top);
+      if (plan.bottom <= H - footerH) break;
+      plan = null;
+    }
+    if (!plan) plan = layout(ctx, tops, rest, 2, 0.86, top);
+    const height = Math.max(H, Math.ceil(plan.bottom + footerH));
+    if (height !== canvas.height) {
+      canvas.height = height; // resets context state
+      ctx = canvas.getContext("2d");
+    }
+
+    ctx.fillStyle = C.bg;
+    ctx.fillRect(0, 0, W, height);
+
+    // Header: eyebrow → title → subtitle
+    let y = PAD + 28;
+    setFont(ctx, 600, 28);
     ctx.fillStyle = C.red;
-    spaced(ctx, 0.18 * 24);
-    ctx.fillText(`CHRISTMAS ${christmasYear()}`, PAD, y);
-    spaced(ctx, 0);
+    ctx.fillText(`Christmas ${christmasYear()}`, PAD, y);
 
     const title = `${possessive(state.name.trim())} Wishlist`;
-    let size = 84;
-    setFont(ctx, 700, size, SERIF);
-    while (ctx.measureText(title).width > W - PAD * 2 - 130 && size > 48) {
+    let size = 80;
+    spaced(ctx, -0.03 * size);
+    setFont(ctx, 700, size);
+    while (ctx.measureText(title).width > W - PAD * 2 && size > 52) {
       size -= 2;
-      setFont(ctx, 700, size, SERIF);
+      spaced(ctx, -0.03 * size);
+      setFont(ctx, 700, size);
     }
-    y += 20 + size;
+    y += 18 + 80;
     ctx.fillStyle = C.text;
-    ctx.fillText(fitText(ctx, title, W - PAD * 2 - 130), PAD, y);
+    ctx.fillText(fitText(ctx, title, W - PAD * 2), PAD - 3, y);
+    spaced(ctx, 0);
 
-    y += 52;
-    setFont(ctx, 500, 26, SANS);
+    y += 50;
+    setFont(ctx, 500, 28);
     ctx.fillStyle = C.muted;
     const t = tops.length;
     ctx.fillText(
@@ -517,38 +530,13 @@
       y
     );
 
-    const contentTop = y + 44;
-    const contentBottom = H - 120;
-
-    // Fit content: try one column, then two, shrinking text as needed.
-    const attempts = [];
-    for (let s = 1; s >= 0.76; s -= 0.04) attempts.push({ cols: 1, s });
-    for (let s = 0.9; s >= 0.6; s -= 0.03) attempts.push({ cols: 2, s });
-    let plan = null;
-    for (const a of attempts) {
-      plan = layout(ctx, tops, rest, a.cols, a.s, contentTop, contentBottom, false);
-      if (plan.fits) break;
-    }
-    if (!plan.fits) {
-      const last = attempts[attempts.length - 1];
-      plan = layout(ctx, tops, rest, last.cols, last.s, contentTop, contentBottom, true);
-    }
-    plan.draw();
+    plan.draw(ctx);
 
     // Footer
-    ctx.strokeStyle = C.line;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(PAD, H - 96);
-    ctx.lineTo(W - PAD, H - 96);
-    ctx.stroke();
-    setFont(ctx, 600, 24, SANS);
+    setFont(ctx, 600, 24);
     ctx.fillStyle = C.green;
-    ctx.fillText("Merry Christmas! 🎄", PAD, H - 50);
-    setFont(ctx, 500, 22, SANS);
-    ctx.fillStyle = C.muted;
-    ctx.textAlign = "right";
-    ctx.fillText("Family Christmas Wishlist", W - PAD, H - 50);
+    ctx.textAlign = "center";
+    ctx.fillText("Merry Christmas", W / 2, height - 52);
     ctx.textAlign = "left";
 
     return new Promise((resolve, reject) =>
@@ -556,220 +544,125 @@
     );
   }
 
-  // Builds a draw plan. Returns { fits, draw }.
-  function layout(ctx, tops, rest, cols, s, top, bottom, truncate) {
-    const ops = [];
-    let y = top;
+  // Top picks span the full width; categories are placed as rounded boxes
+  // into the shortest column. Returns { fits, draw }.
+  function layout(mctx, tops, rest, cols, s, top) {
     const fullW = W - PAD * 2;
+    const gap = 24;
+    const boxes = [];
+    let y = top;
 
-    // Top picks block (full width)
     if (tops.length) {
-      const innerPad = 28 * s;
-      const rows = tops.map((it) => measureItem(ctx, it, fullW - innerPad * 2, s, true));
-      const headerH = 46 * s;
-      const blockH = innerPad * 2 + headerH + rows.reduce((a, r) => a + r.h, 0);
-      const by = y;
-      ops.push(() => {
-        roundRect(ctx, PAD, by, fullW, blockH, 24);
-        ctx.fillStyle = C.topBg;
+      const box = measureBox(mctx, "Top picks", tops, fullW, s, { star: true });
+      boxes.push({ box, x: PAD, y });
+      y += box.h + gap;
+    }
+
+    const colW = (fullW - gap * (cols - 1)) / cols;
+    const heights = new Array(cols).fill(y);
+    rest.forEach((g) => {
+      const box = measureBox(mctx, g.title, g.items, colW, s, {});
+      const col = heights.indexOf(Math.min(...heights));
+      boxes.push({ box, x: PAD + col * (colW + gap), y: heights[col] });
+      heights[col] += box.h + gap;
+    });
+
+    return {
+      bottom: Math.max(...heights) - gap,
+      draw: (ctx) => boxes.forEach((b) => b.box.draw(ctx, b.x, b.y)),
+    };
+  }
+
+  function measureBox(mctx, title, items, w, s, opts) {
+    const padX = 30 * s;
+    const padTop = 26 * s;
+    const padBottom = 8 * s;
+    const headerSize = 22 * s;
+    const headerH = headerSize + 8 * s;
+    const innerW = w - padX * 2;
+    const rows = items.map((it) => measureRow(mctx, it, innerW, s));
+    const h = padTop + headerH + rows.reduce((a, r) => a + r.h, 0) + padBottom;
+
+    return {
+      h,
+      draw(ctx, x, y) {
+        roundRect(ctx, x, y, w, h, 28);
+        ctx.fillStyle = C.box;
         ctx.fill();
-        setFont(ctx, 700, 22 * s, SANS);
-        ctx.fillStyle = C.gold;
-        spaced(ctx, 0.14 * 22 * s);
-        ctx.fillText("★ TOP PICKS", PAD + innerPad, by + innerPad + 22 * s);
-        spaced(ctx, 0);
-        let ry = by + innerPad + headerH;
-        rows.forEach((r) => {
-          r.draw(PAD + innerPad, ry);
+
+        let hx = x + padX;
+        const hy = y + padTop + headerSize * 0.8;
+        if (opts.star) {
+          ctx.fillStyle = C.gold;
+          star(ctx, hx + headerSize * 0.45, hy - headerSize * 0.36, headerSize * 0.52);
+          hx += headerSize * 1.25;
+        }
+        setFont(ctx, 600, headerSize);
+        ctx.fillStyle = C.muted;
+        ctx.fillText(fitText(ctx, title, x + w - padX - hx), hx, hy);
+
+        let ry = y + padTop + headerH;
+        rows.forEach((r, i) => {
+          if (i > 0) hairline(ctx, x + padX, x + w - padX, ry);
+          r.draw(ctx, x + padX, ry);
           ry += r.h;
         });
-      });
-      y += blockH + 36 * s;
-    }
-
-    // Remaining items flow into columns
-    const gap = 48;
-    const colW = (fullW - gap * (cols - 1)) / cols;
-    const rows = [];
-    rest.forEach((g) => {
-      rows.push({ header: true, ...measureHeader(ctx, g.category, colW, s) });
-      g.items.forEach((it) => rows.push(measureItem(ctx, it, colW, s, false)));
-    });
-
-    const colTop = y;
-    let col = 0;
-    let cy = colTop;
-    let placed = 0;
-    let fits = true;
-    const moreH = 40 * s;
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const next = rows[i + 1];
-      // Keep a header together with its first item.
-      const need = r.header && next ? r.h + next.h : r.h;
-      const limit = truncate ? bottom - moreH : bottom;
-      if (cy + need > limit) {
-        if (col < cols - 1) {
-          col++;
-          cy = colTop;
-        }
-        if (cy + need > limit) {
-          fits = false;
-          break;
-        }
-      }
-      const x = PAD + col * (colW + gap);
-      const ry = cy;
-      ops.push(() => r.draw(x, ry));
-      cy += r.h;
-      placed++;
-    }
-    if (colTop > bottom) fits = false;
-
-    if (!fits && truncate) {
-      const remaining = rows.slice(placed).filter((r) => !r.header).length;
-      if (remaining > 0) {
-        const x = PAD + col * (colW + gap);
-        const ry = Math.min(cy, bottom - moreH);
-        ops.push(() => {
-          setFont(ctx, 600, 24 * s, SANS);
-          ctx.fillStyle = C.muted;
-          ctx.fillText(`+ ${remaining} more ${remaining === 1 ? "item" : "items"}`, x, ry + 28 * s);
-        });
-      }
-    }
-
-    return { fits, draw: () => ops.forEach((op) => op()) };
-  }
-
-  function measureHeader(ctx, category, colW, s) {
-    const size = 21 * s;
-    const h = 64 * s;
-    return {
-      h,
-      draw(x, y) {
-        setFont(ctx, 700, size, SANS);
-        ctx.fillStyle = C.muted;
-        spaced(ctx, 0.12 * size);
-        const label = `${category.emoji ? category.emoji + "  " : ""}${category.name.toUpperCase()}`;
-        ctx.fillText(fitText(ctx, label, colW), x, y + h - 18 * s);
-        spaced(ctx, 0);
       },
     };
   }
 
-  function measureItem(ctx, it, colW, s, isTop) {
-    const nameSize = (isTop ? 32 : 29) * s;
-    const noteSize = 22 * s;
-    const lineH = nameSize * 1.3;
-    const noteLineH = noteSize * 1.35;
-    const markerW = 36 * s;
-    const padY = 12 * s;
-
-    const tagText = it.kind === "need" ? "NEED" : "WANT";
-    const tagSize = 16 * s;
-    setFont(ctx, 700, tagSize, SANS);
-    spaced(ctx, 0.08 * tagSize);
-    const tagW = ctx.measureText(tagText).width + 20 * s;
-    spaced(ctx, 0);
-    const tagH = 30 * s;
+  function measureRow(mctx, it, w, s) {
+    const nameSize = 28 * s;
+    const nameLH = nameSize * 1.25;
+    const subSize = 21 * s;
+    const subLH = subSize * 1.45;
+    const padY = 14 * s;
 
     const price = formatPrice(it.price);
-    setFont(ctx, 600, 24 * s, SANS);
-    const priceW = price ? ctx.measureText(price).width + 14 * s : 0;
+    setFont(mctx, 500, 24 * s);
+    const priceW = price ? mctx.measureText(price).width + 20 * s : 0;
 
-    const rightW = tagW + priceW + 14 * s;
-    const textW = colW - markerW - rightW;
-    setFont(ctx, isTop ? 700 : 600, nameSize, SANS);
-    const nameLines = wrap(ctx, it.name, textW, 2);
-    setFont(ctx, 500, noteSize, SANS);
+    setFont(mctx, 500, nameSize);
+    const nameLines = wrap(mctx, it.name, w - priceW, 2);
+
+    const kind = it.kind === "need" ? "Need" : "Want";
     const note = (it.note || "").trim();
-    const noteLines = note ? wrap(ctx, note, colW - markerW, 2) : [];
-
-    const h = padY * 2 + nameLines.length * lineH + noteLines.length * noteLineH;
+    const h = padY * 2 + nameLines.length * nameLH + subLH;
 
     return {
       h,
-      draw(x, y) {
-        const firstBase = y + padY + nameSize;
-        // Marker
-        const cx = x + 11 * s;
-        const cyy = firstBase - nameSize * 0.36;
-        ctx.beginPath();
-        ctx.arc(cx, cyy, 9 * s, 0, Math.PI * 2);
-        ctx.fillStyle = it.kind === "need" ? C.green : C.red;
-        ctx.fill();
-
-        // Name
-        setFont(ctx, isTop ? 700 : 600, nameSize, SANS);
+      draw(ctx, x, y) {
+        const base = y + padY + nameSize * 0.92;
+        setFont(ctx, 500, nameSize);
         ctx.fillStyle = C.text;
-        nameLines.forEach((ln, i) => ctx.fillText(ln, x + markerW, firstBase + i * lineH));
+        nameLines.forEach((ln, i) => ctx.fillText(ln, x, base + i * nameLH));
 
-        // Note
-        if (noteLines.length) {
-          setFont(ctx, 500, noteSize, SANS);
-          ctx.fillStyle = C.muted;
-          const ny = firstBase + (nameLines.length - 1) * lineH + noteLineH + 2 * s;
-          noteLines.forEach((ln, i) => ctx.fillText(ln, x + markerW, ny + i * noteLineH));
-        }
-
-        // Price + tag on the right, aligned with first line
-        let rx = x + colW;
-        rx -= tagW;
-        roundRect(ctx, rx, cyy - tagH / 2, tagW, tagH, 8 * s);
-        ctx.fillStyle = it.kind === "need" ? C.greenSoft : C.redSoft;
-        ctx.fill();
-        setFont(ctx, 700, tagSize, SANS);
-        spaced(ctx, 0.08 * tagSize);
-        ctx.fillStyle = it.kind === "need" ? C.green : C.red;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(tagText, rx + tagW / 2, cyy + 1);
-        ctx.textAlign = "left";
-        ctx.textBaseline = "alphabetic";
-        spaced(ctx, 0);
         if (price) {
-          setFont(ctx, 600, 24 * s, SANS);
+          setFont(ctx, 500, 24 * s);
           ctx.fillStyle = C.muted;
           ctx.textAlign = "right";
-          ctx.fillText(price, rx - 14 * s, firstBase - 2 * s);
+          ctx.fillText(price, x + w, base);
           ctx.textAlign = "left";
+        }
+
+        // Secondary line: "Want · note"
+        const sy = base + (nameLines.length - 1) * nameLH + subLH;
+        setFont(ctx, 600, subSize);
+        ctx.fillStyle = it.kind === "need" ? C.green : C.amber;
+        ctx.fillText(kind, x, sy);
+        if (note) {
+          const kw = ctx.measureText(kind).width;
+          setFont(ctx, 400, subSize);
+          ctx.fillStyle = C.muted;
+          ctx.fillText(fitText(ctx, ` · ${note}`, w - kw), x + kw, sy);
         }
       },
     };
   }
 
-  function drawTree(ctx, x, y, s) {
-    // Minimal stacked-triangle tree with a star
-    ctx.fillStyle = C.green;
-    const tiers = [
-      [0, 26, 26],
-      [18, 38, 40],
-      [40, 52, 50],
-    ];
-    tiers.forEach(([dy, half, h]) => {
-      ctx.beginPath();
-      ctx.moveTo(x + 52 * s, y + dy * s);
-      ctx.lineTo(x + (52 - half) * s, y + (dy + h) * s);
-      ctx.lineTo(x + (52 + half) * s, y + (dy + h) * s);
-      ctx.closePath();
-      ctx.fill();
-    });
-    ctx.fillStyle = "#8a5a3c";
-    ctx.fillRect(x + 46 * s, y + 90 * s, 12 * s, 14 * s);
-    ctx.fillStyle = C.gold;
-    star(ctx, x + 52 * s, y - 6 * s, 12 * s);
-    ctx.fillStyle = C.red;
-    [
-      [40, 50],
-      [64, 62],
-      [34, 80],
-      [70, 86],
-    ].forEach(([ox, oy]) => {
-      ctx.beginPath();
-      ctx.arc(x + ox * s, y + oy * s, 4.5 * s, 0, Math.PI * 2);
-      ctx.fill();
-    });
+  function hairline(ctx, x1, x2, y) {
+    ctx.fillStyle = C.hairline;
+    ctx.fillRect(x1, y - 1, x2 - x1, 2);
   }
 
   function star(ctx, cx, cy, r) {
@@ -783,8 +676,8 @@
     ctx.fill();
   }
 
-  function setFont(ctx, weight, size, family) {
-    ctx.font = `${weight} ${Math.round(size * 10) / 10}px ${family}`;
+  function setFont(ctx, weight, size) {
+    ctx.font = `${weight} ${Math.round(size * 10) / 10}px ${SANS}`;
   }
 
   function spaced(ctx, px) {

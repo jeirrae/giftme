@@ -9,7 +9,7 @@ A simple static site where each family member ticks off what they want or need f
 - Add your own items under "Something else?"
 - Progress is saved in the browser, so refreshing won't lose anything
 - Christmas countdown and automatic dark mode
-- The image is a 1080×1350 portrait PNG. On phones, **Share** opens the share sheet so you can pick Messenger. On desktop, download it and send it in Messenger.
+- The image is a 1080×1350 portrait PNG (longer lists make it taller rather than hiding items). On phones, **Share** opens the share sheet so you can pick Messenger. On desktop, download it and send it in Messenger.
 
 ## Editing the preset items
 
