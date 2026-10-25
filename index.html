@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=202610251720" />
+  <link rel="stylesheet" href="styles.css?v=202610251730" />
 </head>
 <body>
   <header class="topbar">
@@ -40,14 +40,15 @@
       <div class="hero">
         <p class="eyebrow">Almost done</p>
         <h1>Who's this wishlist from?</h1>
-        <p class="lead">Your name or nickname will appear on your wishlist.</p>
+        <p class="lead">Your first name will appear on your wishlist.</p>
       </div>
       <form id="name-form" class="name-form" autocomplete="off">
         <div class="card name-card">
-          <label for="name-input" class="sr-only">Name or nickname</label>
-          <input id="name-input" type="text" maxlength="30" placeholder="Name or nickname" required />
+          <label for="name-input" class="sr-only">First name</label>
+          <input id="name-input" type="text" maxlength="20" placeholder="First name" autocapitalize="words" autocomplete="given-name" required />
         </div>
-        <p class="error" id="name-error" hidden>Please enter your name or nickname.</p>
+        <p class="error" id="name-error" hidden>Please enter your first name.</p>
+        <p class="hint name-hint" id="name-hint">Letters only. Spaces and dashes are okay.</p>
         <div class="pair">
           <button type="button" class="btn btn-plain" data-go="list">Back</button>
           <button type="submit" class="btn btn-primary">Continue</button>
@@ -185,7 +186,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="items.js?v=202610251720"></script>
-  <script src="app.js?v=202610251720"></script>
+  <script src="items.js?v=202610251730"></script>
+  <script src="app.js?v=202610251730"></script>
 </body>
 </html>

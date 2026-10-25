@@ -86,7 +86,7 @@
         custom: (Array.isArray(s.custom) ? s.custom : [])
           .filter((c) => c && c.id && c.name)
           .map((c) => ({ id: String(c.id), name: String(c.name).slice(0, 60) })),
-        name: String(s.name || "").slice(0, 30),
+        name: formatName(s.name),
         confirmed: !!s.confirmed,
         sizes,
         shoeSys: ["US", "UK", "EU", "Kids"].includes(s.shoeSys) ? s.shoeSys : "US",
@@ -201,6 +201,25 @@
   function christmasYear(now = new Date()) {
     const y = now.getFullYear();
     return now.getMonth() === 11 && now.getDate() > 25 ? y + 1 : y;
+  }
+
+  // Names: letters, spaces and dashes only, up to 20 characters.
+  function cleanName(text) {
+    return String(text || "")
+      .replace(/[^\p{L}\p{M}\s-]/gu, "")
+      .replace(/\s+/g, " ")
+      .replace(/-+/g, "-")
+      .replace(/\s*-\s*/g, "-")
+      .slice(0, 20);
+  }
+
+  // "jr" → "Jr", "MARY ANN" → "Mary Ann", "jo-ann" → "Jo-Ann".
+  function formatName(text) {
+    return cleanName(text)
+      .trim()
+      .replace(/^-+|-+$/g, "")
+      .toLocaleLowerCase()
+      .replace(/(^|[\s-])(\p{L})/gu, (m, sep, ch) => sep + ch.toLocaleUpperCase());
   }
 
   function possessive(name) {
@@ -1670,10 +1689,10 @@
 
     $("#name-form").addEventListener("submit", (e) => {
       e.preventDefault();
-      const name = $("#name-input").value.trim().replace(/\s+/g, " ");
+      const name = formatName($("#name-input").value);
       const error = $("#name-error");
       if (!name || isRude(name)) {
-        error.textContent = name ? NAUGHTY : "Please enter your name or nickname.";
+        error.textContent = name ? NAUGHTY : "Please enter your first name.";
         error.hidden = false;
         return;
       }
@@ -1681,6 +1700,28 @@
       state.name = name;
       save();
       go("review");
+    });
+
+    // Remove numbers and symbols as they're typed, and say why.
+    $("#name-input").addEventListener("input", (e) => {
+      const input = e.target;
+      const cleaned = cleanName(input.value);
+      const hint = $("#name-hint");
+      if (cleaned !== input.value) {
+        const pos = Math.max(0, (input.selectionStart || cleaned.length) - (input.value.length - cleaned.length));
+        input.value = cleaned;
+        try {
+          input.setSelectionRange(pos, pos);
+        } catch (_) {}
+        hint.classList.add("warn");
+        clearTimeout(input._hintTimer);
+        input._hintTimer = setTimeout(() => hint.classList.remove("warn"), 2500);
+      }
+      $("#name-error").hidden = true;
+    });
+    // Show the tidy version when leaving the box.
+    $("#name-input").addEventListener("blur", (e) => {
+      e.target.value = formatName(e.target.value);
     });
 
     $("#confirm-btn").addEventListener("click", () => {

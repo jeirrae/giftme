@@ -531,3 +531,6 @@ body.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+.name-hint { margin: -4px 4px 0; text-align: left; font-size: 13px; transition: color .2s var(--ease); }
+.name-hint.warn { color: var(--red); font-weight: 600; }
