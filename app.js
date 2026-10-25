@@ -1067,9 +1067,13 @@
     a.click();
     a.remove();
     // Messenger's built-in browser often ignores downloads.
-    if (IN_APP) openSaveHelp();
-    else if (forShare === true) toast({ emoji: "📨", title: "Image saved", text: "Open Messenger and send it from your photos." }, 3500);
-    else toast({ emoji: "🎁", title: "Image saved", text: "Now send it to the family!" });
+    if (forShare === true) {
+      toast({ emoji: "📨", title: "Image saved", text: "Sharing isn't available here. Send it from your photos." }, 3000);
+    } else if (IN_APP) {
+      toast({ emoji: "⬇️", title: "Downloading…", text: "If it didn't save, press and hold the image, then tap Save Image." }, 3000);
+    } else {
+      toast({ emoji: "⬇️", title: "Image saved", text: "It's in your downloads or photos." }, 3000);
+    }
   }
 
   // Canvas drawing — a fixed 1080×1920 (9:16) card that looks the same everywhere.
@@ -1782,11 +1786,31 @@
     }
 
     // Edit link on the last page.
+    // Edit List asks first, then goes back to the gifts.
+    const editModal = $("#edit-confirm");
+    const closeEdit = () => {
+      editModal.hidden = true;
+      document.body.classList.remove("modal-open");
+    };
+    $("#edit-list-btn").addEventListener("click", () => {
+      editModal.hidden = false;
+      document.body.classList.add("modal-open");
+      setTimeout(() => $("#edit-confirm-ok").focus(), 50);
+    });
+    $("#edit-confirm-cancel").addEventListener("click", closeEdit);
+    $("#edit-confirm-ok").addEventListener("click", () => {
+      closeEdit();
+      go("list");
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !editModal.hidden) closeEdit();
+    });
+
     $("#edit-link-btn").addEventListener("click", async () => {
       const url = editLink();
       try {
         await navigator.clipboard.writeText(url);
-        toast({ emoji: "🔗", title: "Edit link copied", text: "Keep it somewhere safe. Open it later to change your list." }, 3500);
+        toast({ emoji: "🔗", title: "Edit link copied", text: "Paste it somewhere safe. Open it later to edit your list." }, 3000);
       } catch (_) {
         window.prompt("Copy this link. Open it later to change your list:", url);
       }

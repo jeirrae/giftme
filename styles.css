@@ -534,8 +534,36 @@ body.modal-open { overflow: hidden; }
 
 .name-caution {
   margin: -2px 0 0; padding: 10px 12px; border-radius: 12px;
-  background: #fff6dc; color: #6b4a00; font-size: 13px; line-height: 1.4;
+  background: #faf6ec; color: #b8a274; font-size: 13px; line-height: 1.4;
   animation: ease-in-down .22s var(--ease);
 }
 .name-caution:not([hidden]) { display: flex; gap: 8px; align-items: flex-start; }
-@media (prefers-color-scheme: dark) { .name-caution { background: #3a2f10; color: #ffe08a; } }
+@media (prefers-color-scheme: dark) { .name-caution { background: #23201a; color: #a8977a; } }
+
+/* Last page: one row of icon buttons */
+.action-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  max-width: 400px; margin: 22px auto 18px;
+}
+.icon-action {
+  display: grid; justify-items: center; gap: 8px; padding: 0; border: 0;
+  background: none; color: var(--text); cursor: pointer;
+}
+.icon-tile {
+  width: 100%; max-width: 76px; aspect-ratio: 1; border-radius: 22px;
+  display: grid; place-items: center;
+  background: var(--surface); color: var(--text);
+  transition: transform .18s var(--ease), background-color .2s var(--ease);
+}
+@media (prefers-color-scheme: dark) { .icon-tile { background: #2a2c30; } }
+.icon-tile svg {
+  width: 26px; height: 26px; fill: none; stroke: currentColor;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.icon-action-green .icon-tile { background: #1e7b4e; color: #fff; }
+.icon-label { font-size: 13px; font-weight: 500; }
+.icon-action:active .icon-tile { transform: scale(.94); }
+.icon-action:disabled { opacity: .45; cursor: not-allowed; }
+.icon-action:focus-visible .icon-tile { outline: 2px solid var(--green); outline-offset: 2px; }
+#edit-confirm .modal-card h2 { margin-top: 4px; }
+#edit-confirm .pair { margin-top: 18px; }

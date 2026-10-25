@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>" />
   <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="styles.css?v=202610251740" />
+  <link rel="stylesheet" href="styles.css?v=202610251750" />
 </head>
 <body>
   <header class="topbar">
@@ -78,21 +78,32 @@
       <div class="hero center">
         <h1>Your wishlist is ready</h1>
       </div>
-      <div class="action-grid">
-        <button type="button" class="action action-yellow" id="share-btn">
-          <strong>Share</strong><span>Send on Messenger</span>
+      <div class="action-row">
+        <button type="button" class="icon-action" id="edit-list-btn">
+          <span class="icon-tile" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+          </span>
+          <span class="icon-label">Edit List</span>
         </button>
-        <button type="button" class="action action-green" id="download-btn">
-          <strong>Download</strong><span>Save to your phone</span>
+        <button type="button" class="icon-action" id="edit-link-btn">
+          <span class="icon-tile" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>
+          </span>
+          <span class="icon-label">Edit Later</span>
         </button>
-        <button type="button" class="action action-small" data-go="list">
-          <strong>Edit list</strong><span>Change your gifts</span>
+        <button type="button" class="icon-action" id="share-btn">
+          <span class="icon-tile" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 15V4"/><path d="M7.5 8.5L12 4l4.5 4.5"/><path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+          </span>
+          <span class="icon-label">Share</span>
         </button>
-        <button type="button" class="action action-small" id="edit-link-btn">
-          <strong>Copy edit link</strong><span>Copy link, edit later</span>
+        <button type="button" class="icon-action icon-action-green" id="download-btn">
+          <span class="icon-tile" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 20h14"/></svg>
+          </span>
+          <span class="icon-label">Download</span>
         </button>
       </div>
-      <p class="hint preview-hint">Download not working?<br />Press and hold the image, then tap Save Image.</p>
       <div class="preview">
         <img id="preview-img" alt="Your Christmas wishlist" />
         <div class="preview-loading" id="preview-loading">Wrapping your list…</div>
@@ -159,6 +170,17 @@
     </div>
   </div>
 
+  <div class="modal" id="edit-confirm" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-confirm-title" tabindex="-1">
+      <h2 id="edit-confirm-title">Edit your list?</h2>
+      <p class="modal-lead">You'll go back to your gifts. Everything you picked stays.</p>
+      <div class="pair">
+        <button type="button" class="btn btn-plain" id="edit-confirm-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="edit-confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="save-help" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="save-help-title" tabindex="-1">
       <button type="button" class="modal-x" id="save-help-x" aria-label="Close">×</button>
@@ -186,7 +208,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="items.js?v=202610251740"></script>
-  <script src="app.js?v=202610251740"></script>
+  <script src="items.js?v=202610251750"></script>
+  <script src="app.js?v=202610251750"></script>
 </body>
 </html>
