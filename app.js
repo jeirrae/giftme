@@ -1694,8 +1694,12 @@
       go("list");
     });
 
-    // Tutorial pop-up: shows once per device; "How it works" opens it again.
-    const TUTORIAL_KEY = "giftme:tutorial-hidden";
+    // Tutorial pop-up: shows each time the link is opened (once per visit, so
+    // not again on a refresh); "How it works" opens it anytime.
+    const TUTORIAL_KEY = "giftme:tutorial-seen";
+    try {
+      localStorage.removeItem("giftme:tutorial-hidden"); // older "once per device" flag
+    } catch (_) {}
     const modal = $("#tutorial");
     let lastFocus = null;
     const openTutorial = () => {
@@ -1717,12 +1721,12 @@
     $("#tips-show").addEventListener("click", openTutorial);
     let tutorialHidden = false;
     try {
-      tutorialHidden = localStorage.getItem(TUTORIAL_KEY) === "1";
+      tutorialHidden = sessionStorage.getItem(TUTORIAL_KEY) === "1";
     } catch (_) {}
     if (!tutorialHidden && !openedFromLink && (location.hash.slice(1) || "list") === "list") {
       openTutorial();
       try {
-        localStorage.setItem(TUTORIAL_KEY, "1");
+        sessionStorage.setItem(TUTORIAL_KEY, "1");
       } catch (_) {}
     }
 

@@ -9,7 +9,7 @@ A simple static site where each family member ticks off what they want or need f
 - Sizes are shared by type: set a shoe size once and every footwear item uses it
 - Up to **8 gifts** plus **4 favorites** (☆). At the limit, the rest lock and Santa complains if you try for more
 - Add your own items under "Something else?"
-- Every visit starts a fresh list (good for shared phones); refreshing the same tab keeps your progress
+- Every visit starts a fresh list (good for shared phones) and shows the How it works guide; refreshing the same tab keeps your progress
 - "Copy my edit link" on the last page packs the whole list into a link, so it can be reopened and changed later
 - Duplicate gifts are blocked, and a simple word filter keeps it family-friendly
 - Christmas countdown and automatic dark mode
