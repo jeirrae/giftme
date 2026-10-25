@@ -3,6 +3,25 @@
 
   const MAX_TOP = 5;
   const MAX_ITEMS = 12; // gifts that aren't favorites
+  const MAX_PRICE = 100000;
+
+  // A small family-friendly filter. Short words only match as whole words
+  // so things like "computer" or "reputation" don't trip it.
+  const RUDE_ANYWHERE = ["fuck", "putangina", "tangina", "punyeta", "tarantado", "asshole", "bitch", "pakyu", "motherf"];
+  const RUDE_WORDS = ["shit", "dick", "pussy", "cunt", "slut", "whore", "bastard", "puta", "gago", "tanga",
+    "bobo", "ulol", "ulul", "tite", "puke", "pokpok", "kupal", "siraulo", "fck", "fk", "tngina", "pota"];
+
+  function isRude(text) {
+    const plain = text.toLowerCase()
+      .replace(/[0@4]/g, (c) => ({ 0: "o", "@": "a", 4: "a" }[c]))
+      .replace(/[1!]/g, "i").replace(/3/g, "e").replace(/[5$]/g, "s").replace(/7/g, "t");
+    const squashed = plain.replace(/[^a-zñ]/g, "");
+    if (RUDE_ANYWHERE.some((w) => squashed.includes(w))) return true;
+    const words = plain.split(/[^a-zñ]+/);
+    return words.some((w) => RUDE_WORDS.includes(w));
+  }
+
+  const NAUGHTY = "Uh-oh, that just landed you on the naughty list 🚨 Try nicer words.";
   const STORAGE_KEY = "giftme:v1";
   const STEPS = ["list", "name", "review", "done"];
   const CATEGORIES = window.WISHLIST_CATEGORIES || [];
@@ -12,13 +31,19 @@
 
   // ---------- State ----------
 
+  // The list lives in sessionStorage: a refresh keeps it, but every new visit
+  // starts fresh so the next person on a shared phone gets a blank list.
+  try {
+    localStorage.removeItem(STORAGE_KEY); // lists saved by older versions
+  } catch (_) {}
+
   // picks: { [itemId]: { kind: "want" | "need", note, price, top } }
   // custom: [{ id, name }] — user-added items (always shown in "Something else?")
   let state = load() || { picks: {}, custom: [], name: "", confirmed: false };
 
   function load() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const s = JSON.parse(raw);
       return {
@@ -34,7 +59,7 @@
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (_) {
       /* storage unavailable: progress just won't persist */
     }
@@ -124,7 +149,7 @@
             <input type="text" class="note" maxlength="80" placeholder="Note (size, color…)" aria-label="Note" />
             <label class="price-field">
               <span>₱</span>
-              <input type="text" class="price" inputmode="numeric" maxlength="9" placeholder="Price" aria-label="Price in pesos" />
+              <input type="text" class="price" inputmode="numeric" maxlength="6" placeholder="Price" aria-label="Price in pesos" />
             </label>
           </div>
         </div>
@@ -338,7 +363,11 @@
     if (e.target.matches(".note")) {
       pick.note = e.target.value;
     } else if (e.target.matches(".price")) {
-      const digits = e.target.value.replace(/\D/g, "");
+      let digits = e.target.value.replace(/\D/g, "").replace(/^0+/, "");
+      if (Number(digits) > MAX_PRICE) {
+        digits = String(MAX_PRICE);
+        toast("Whoa, big spender! Prices top out at ₱100,000.");
+      }
       if (digits !== e.target.value) e.target.value = digits;
       pick.price = digits;
     } else {
@@ -352,6 +381,15 @@
     const input = $("#custom-input");
     const name = input.value.trim().replace(/\s+/g, " ");
     if (!name) return;
+    if (isRude(name)) {
+      toast(NAUGHTY, 3200);
+      return;
+    }
+    const dupe = findDuplicate(name);
+    if (dupe) {
+      toast(dupe, 3500);
+      return;
+    }
     if (regularCount() >= MAX_ITEMS) {
       warnLimit("gifts");
       return;
@@ -363,6 +401,31 @@
     renderCustom();
     changed();
     input.focus();
+  }
+
+  // "Sneakers", "sneaker" and "SNEAKERS!" all count as the same gift.
+  function sameKey(text) {
+    return text.toLowerCase().replace(/[^a-z0-9ñ]+/g, " ").trim()
+      .split(" ").map((w) => (w.length > 3 ? w.replace(/(es|s)$/, "") : w)).join(" ");
+  }
+
+  function findDuplicate(name) {
+    const key = sameKey(name);
+    for (const cat of CATEGORIES) {
+      for (const it of cat.items) {
+        const parts = [it.name, ...it.name.split(/\s*(?:\/|\bor\b|\(|\)|,|&)\s*/)];
+        if (parts.some((p) => p.trim().length > 2 && sameKey(p) === key)) {
+          return `Great minds think alike! "${it.name}" is already on the list under ${cat.name}.`;
+        }
+      }
+    }
+    const mine = state.custom.find((c) => sameKey(c.name) === key);
+    return mine ? `You already added "${mine.name}". Santa heard you the first time!` : null;
+  }
+
+  // Before leaving the list, make sure no note has words that need washing.
+  function rudeNoteItem() {
+    return Object.keys(state.picks).find((id) => itemName(id) && isRude(state.picks[id].note || ""));
   }
 
   // ---------- Steps / routing ----------
@@ -483,8 +546,7 @@
   }
 
   function fileName() {
-    const slug = state.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    return `christmas-wishlist-${slug || "me"}.png`;
+    return "My Christmas Wishlist.png";
   }
 
   function setupShareUI(blob) {
@@ -1017,12 +1079,12 @@
   }
 
   let toastTimer;
-  function toast(msg) {
+  function toast(msg, ms = 2200) {
     const el = $("#toast");
     el.textContent = msg;
     el.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+    toastTimer = setTimeout(() => el.classList.remove("show"), ms);
   }
 
   function renderCountdown() {
@@ -1048,13 +1110,27 @@
     $("#custom-form").addEventListener("submit", onCustomSubmit);
 
     $$("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
-    $("#next-btn").addEventListener("click", () => go("name"));
+    $("#next-btn").addEventListener("click", () => {
+      const bad = rudeNoteItem();
+      if (bad) {
+        const note = $(`.item[data-id="${bad}"] .note`);
+        if (note) {
+          note.scrollIntoView({ block: "center" });
+          note.focus();
+        }
+        toast(NAUGHTY, 3200);
+        return;
+      }
+      go("name");
+    });
 
     $("#name-form").addEventListener("submit", (e) => {
       e.preventDefault();
       const name = $("#name-input").value.trim().replace(/\s+/g, " ");
-      if (!name) {
-        $("#name-error").hidden = false;
+      const error = $("#name-error");
+      if (!name || isRude(name)) {
+        error.textContent = name ? NAUGHTY : "Please enter your name or nickname.";
+        error.hidden = false;
         return;
       }
       if (name !== state.name) state.confirmed = false;

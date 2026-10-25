@@ -7,7 +7,8 @@ A simple static site where each family member ticks off what they want or need f
 - Each item can be tagged **Want** or **Need**, with an optional note (size, color, brand) and ₱ price
 - Up to **12 gifts** plus **5 favorites** (☆). At 12, the other gifts lock and Santa complains if you try for more
 - Add your own items under "Something else?"
-- Progress is saved in the browser, so refreshing won't lose anything
+- Every visit starts a fresh list (good for shared phones); refreshing the same tab keeps your progress
+- Prices are capped at ₱100,000, duplicate gifts are blocked, and a simple word filter keeps it family-friendly
 - Christmas countdown and automatic dark mode
 - The image is a 1080×1620 (4:6) PNG: favorites in a green box, everything else grouped by Want/Need and category, and your own items in a separate box. Text resizes so every item fits. On phones, **Share** opens the share sheet so you can pick Messenger. On desktop, download it and send it in Messenger.
 
