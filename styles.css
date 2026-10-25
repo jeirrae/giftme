@@ -28,6 +28,7 @@
   --green: #1e7b4e;
   --green-tint: #e6f2ec;
   --amber: #a86b00;
+  --yellow-green: #5e8a1c;
   --gold: #f5b300;
   --radius: 20px;
   --font: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
@@ -47,6 +48,7 @@
     --green: #34c77b;
     --green-tint: #15301f;
     --amber: #ffd60a;
+    --yellow-green: #a6d65a;
     --gold: #ffd60a;
   }
 }
@@ -176,8 +178,7 @@ h1 {
 @media (prefers-color-scheme: dark) { .seg button[aria-pressed="true"] { background: #636366; } }
 .seg button[aria-pressed="true"][data-kind="want"] { color: var(--amber); }
 .seg button[aria-pressed="true"][data-kind="need"] { color: var(--green); }
-.seg button[aria-pressed="true"][data-kind="both"] { color: var(--text); }
-.kind-sep { color: var(--muted); font-weight: 400; }
+.seg button[aria-pressed="true"][data-kind="both"], .kind-both { color: var(--yellow-green); }
 .kind-hint { margin: -2px 0 0; font-size: 13px; color: var(--muted); }
 
 .detail-fields { display: grid; grid-template-columns: 1fr 112px; gap: 8px; }

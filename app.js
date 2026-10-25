@@ -555,9 +555,8 @@
   }
 
   function kindLabelHTML(kind) {
-    return kindParts(kindOf(kind))
-      .map((k) => `<span class="kind kind-${k}">${KIND_LABEL[k]}</span>`)
-      .join('<span class="kind-sep"> | </span>');
+    const k = kindOf(kind);
+    return `<span class="kind kind-${k}">${k === "both" ? "Want | Need" : KIND_LABEL[k]}</span>`;
   }
 
   // ---------- Step 4: image ----------
@@ -664,9 +663,11 @@
     flake: "#dedee4",
   };
   // Want / Need pills share one saturation so neither shouts louder.
-  const PILL = { want: "#d29a17", need: "#2f9a5c" };
+  const PILL = { want: "#d29a17", need: "#2f9a5c", both: "#70a329" };
+  const PILL_SIZE = 16; // text size; every pill uses the same size
+  const PILL_H = 28;
   const THEME = {
-    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.78)", hairline: "rgba(255,255,255,0.2)", pillBorder: "#ffffff" },
+    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.78)", hairline: "rgba(255,255,255,0.2)" },
     light: { text: C.text, muted: C.muted, hairline: C.hairline },
   };
   const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -877,7 +878,7 @@
     const headerH = headerSize + 18 * s;
     const innerW = w - padX * 2;
     const showLabels = kinds.length > 1;
-    const labelH = showLabels ? 36 * s + 16 * s : 0;
+    const labelH = showLabels ? PILL_H * s + 16 * s : 0;
     const gap = 16 * s;
     const sectionGap = 26 * s;
 
@@ -915,16 +916,14 @@
         let sy = y + padTop + headerH;
         sections.forEach((sec) => {
           if (showLabels) {
-            // Right-aligned on the same vertical line as the item pills.
-            const right = x + w - padX;
-            const pw = kindPillWidth(ctx, sec.kind, 20 * s);
-            kindPill(ctx, right - pw, sy + 18 * s, sec.kind, 20 * s, 36 * s);
-            setFont(ctx, 500, 20 * s);
+            // Count on the left guide line, pill on the right one.
+            const cy = sy + (PILL_H * s) / 2;
+            const pw = kindPillWidth(ctx, sec.kind, PILL_SIZE * s);
+            kindPill(ctx, x + w - padX - pw, cy, sec.kind, PILL_SIZE * s, PILL_H * s);
+            setFont(ctx, 500, 19 * s);
             ctx.fillStyle = C.muted;
-            ctx.textAlign = "right";
             ctx.textBaseline = "middle";
-            ctx.fillText(`${sec.count} ${sec.count === 1 ? "item" : "items"}`, right - pw - 12 * s, sy + 19 * s);
-            ctx.textAlign = "left";
+            ctx.fillText(`${sec.count} ${sec.count === 1 ? "item" : "items"}`, x + padX, cy);
             ctx.textBaseline = "alphabetic";
           }
           sec.cats.forEach((c) => c.box.draw(ctx, x + padX + c.dx, sy + labelH + c.dy));
@@ -969,8 +968,8 @@
     const noteSize = (opt.big ? 21 : 19) * s;
     const noteLH = noteSize * 1.45;
     const padY = (opt.big ? 15 : 12) * s;
-    const pillSize = 16 * s;
-    const pillH = 28 * s;
+    const pillSize = PILL_SIZE * s;
+    const pillH = PILL_H * s;
     const priceSize = (opt.big ? 24 : 21) * s;
 
     setFont(mctx, 600, pillSize);
@@ -998,7 +997,7 @@
         let rx = x + w;
         if (opt.tag) {
           rx -= pillW;
-          kindPill(ctx, rx, mid, kind, pillSize, pillH, theme.pillBorder);
+          kindPill(ctx, rx, mid, kind, pillSize, pillH);
           rx -= 14 * s;
         }
         if (price) {
@@ -1020,42 +1019,37 @@
     };
   }
 
-  // Want / Need pills with white text. "Both" is one pill split into a
-  // yellow "Want" half and a green "Need" half.
-  function kindParts(kind) {
-    return kind === "both" ? ["want", "need"] : [kind];
-  }
-
+  // Want / Need pills with white text, all the same height. Single pills
+  // share one width; Both is a yellow-green "Want | Need" pill with a short
+  // divider that stops short of the top and bottom.
   function kindPillWidth(ctx, kind, size) {
     setFont(ctx, 600, size);
-    return kindParts(kind).reduce((w, k) => w + ctx.measureText(KIND_LABEL[k]).width + size * 1.4, 0);
+    const half = Math.max(ctx.measureText("Want").width, ctx.measureText("Need").width);
+    return kind === "both" ? half * 2 + size * 2.6 : half + size * 1.4;
   }
 
-  function kindPill(ctx, x, cy, kind, size, h, border) {
+  function kindPill(ctx, x, cy, kind, size, h) {
     const w = kindPillWidth(ctx, kind, size);
-    ctx.save();
     roundRect(ctx, x, cy - h / 2, w, h, h / 2);
-    ctx.clip();
-    let px = x;
-    kindParts(kind).forEach((k) => {
-      setFont(ctx, 600, size);
-      const pw = ctx.measureText(KIND_LABEL[k]).width + size * 1.4;
-      ctx.fillStyle = PILL[k];
-      ctx.fillRect(px, cy - h / 2, pw, h);
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(KIND_LABEL[k], px + pw / 2, cy + size * 0.04);
-      px += pw;
-    });
-    ctx.restore();
-    if (border) {
-      // Thin outline, drawn just inside the pill's edge.
-      const bw = Math.max(1.5, size * 0.12);
-      roundRect(ctx, x + bw / 2, cy - h / 2 + bw / 2, w - bw, h - bw, (h - bw) / 2);
-      ctx.strokeStyle = border;
-      ctx.lineWidth = bw;
+    ctx.fillStyle = PILL[kind];
+    ctx.fill();
+    setFont(ctx, 600, size);
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const ty = cy + size * 0.04;
+    if (kind === "both") {
+      const mid = x + w / 2;
+      ctx.fillText("Want", (x + mid) / 2 + size * 0.15, ty);
+      ctx.fillText("Need", (mid + x + w) / 2 - size * 0.15, ty);
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = Math.max(1.5, size * 0.1);
+      ctx.beginPath();
+      ctx.moveTo(mid, cy - h * 0.27);
+      ctx.lineTo(mid, cy + h * 0.27);
       ctx.stroke();
+    } else {
+      ctx.fillText(KIND_LABEL[kind], x + w / 2, ty);
     }
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
