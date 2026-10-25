@@ -2,6 +2,7 @@
   "use strict";
 
   const MAX_TOP = 5;
+  const MAX_ITEMS = 12; // gifts that aren't favorites
   const STORAGE_KEY = "giftme:v1";
   const STEPS = ["list", "name", "review", "done"];
   const CATEGORIES = window.WISHLIST_CATEGORIES || [];
@@ -76,6 +77,10 @@
 
   function pickCount() {
     return Object.keys(state.picks).filter((id) => itemName(id)).length;
+  }
+
+  function regularCount() {
+    return pickCount() - topCount();
   }
 
   function topCount() {
@@ -178,11 +183,21 @@
   function updateTally() {
     const n = pickCount();
     const t = topCount();
-    $("#tally-count").textContent = `${n} ${n === 1 ? "item" : "items"}`;
+    const r = regularCount();
+    const count = $("#tally-count");
+    count.textContent = `${r}/${MAX_ITEMS} gifts`;
+    count.classList.toggle("over", r > MAX_ITEMS);
     const top = $("#tally-top");
     top.textContent = `${t}/${MAX_TOP} favorites`;
     top.classList.toggle("full", t >= MAX_TOP);
-    $("#next-btn").disabled = n === 0;
+    $("#next-btn").disabled = n === 0 || r > MAX_ITEMS;
+
+    // At the limit, unticked gifts are locked (favorites can still be starred).
+    const full = r >= MAX_ITEMS;
+    $$(".item").forEach((li) => li.classList.toggle("is-locked", full && !state.picks[li.dataset.id]));
+    $("#custom-form").classList.toggle("is-locked", full);
+    if (!full || r > MAX_ITEMS) limitWarned = false;
+    renderLimit();
 
     // Disable stars that can't be pressed anymore.
     $$(".star").forEach((s) => {
@@ -194,6 +209,49 @@
     });
   }
 
+  // Banner above the bottom bar: yellow at the limit, red when someone
+  // tries to add more (or a saved list is somehow over).
+  let limitWarned = false;
+  let shakeTimer;
+
+  function renderLimit() {
+    const r = regularCount();
+    const box = $("#limit");
+    if (r < MAX_ITEMS) {
+      box.hidden = true;
+      return;
+    }
+    const over = r > MAX_ITEMS;
+    const angry = over || limitWarned;
+    box.hidden = false;
+    box.className = "limit " + (angry ? "over" : "full");
+    $("#limit-emoji").textContent = angry ? "🎅" : "🛷";
+    $("#limit-title").textContent = angry ? "Ho ho ho… hold on!" : `That's ${MAX_ITEMS}, the max!`;
+    const extra = r - MAX_ITEMS;
+    $("#limit-text").textContent = !angry
+      ? "Santa's sleigh is officially full. You can still swap gifts around."
+      : over
+      ? `You're asking for too much! Santa's back hurts already. Uncheck ${extra} ${extra === 1 ? "gift" : "gifts"} to continue.`
+      : "You're asking for too much! Santa's back hurts already. Uncheck a gift to add a new one.";
+  }
+
+  function warnLimit() {
+    limitWarned = true;
+    renderLimit();
+    const box = $("#limit");
+    box.classList.remove("shake");
+    void box.offsetWidth; // restart the animation
+    box.classList.add("shake");
+    clearTimeout(shakeTimer);
+    shakeTimer = setTimeout(() => {
+      box.classList.remove("shake");
+      setTimeout(() => {
+        limitWarned = false;
+        renderLimit();
+      }, 3500);
+    }, 500);
+  }
+
   function onListClick(e) {
     const li = e.target.closest(".item");
     if (!li) return;
@@ -202,6 +260,10 @@
     if (e.target.closest(".star")) {
       const pick = state.picks[id];
       if (pick && pick.top) {
+        if (regularCount() >= MAX_ITEMS) {
+          warnLimit();
+          return;
+        }
         pick.top = false;
       } else if (topCount() >= MAX_TOP) {
         toast(`You can pick up to ${MAX_TOP} favorites. Tap a star again to remove it.`);
@@ -235,6 +297,11 @@
     const li = e.target.closest(".item");
     const id = li.dataset.id;
     if (e.target.checked) {
+      if (!state.picks[id] && regularCount() >= MAX_ITEMS) {
+        e.target.checked = false;
+        warnLimit();
+        return;
+      }
       state.picks[id] = state.picks[id] || { kind: "want", note: "", price: "", top: false };
     } else {
       delete state.picks[id];
@@ -264,6 +331,10 @@
     const input = $("#custom-input");
     const name = input.value.trim().replace(/\s+/g, " ");
     if (!name) return;
+    if (regularCount() >= MAX_ITEMS) {
+      warnLimit();
+      return;
+    }
     const id = "custom-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     state.custom.push({ id, name });
     state.picks[id] = { kind: "want", note: "", price: "", top: false };

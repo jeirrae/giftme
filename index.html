@@ -38,7 +38,7 @@
         <ol class="tips-list">
           <li>
             <span class="tip-icon tip-check" aria-hidden="true"><span class="mini-check"></span></span>
-            <span><strong>Tap a gift</strong> to add it to your list.</span>
+            <span><strong>Tap a gift</strong> to add it to your list. You can pick up to 12.</span>
           </li>
           <li>
             <span class="tip-icon tip-star" aria-hidden="true">★</span>
@@ -125,9 +125,15 @@
 
   <!-- Sticky footer on step 1 -->
   <div class="bottombar" id="bottombar">
+    <div class="wrap">
+      <div class="limit" id="limit" role="status" aria-live="polite" hidden>
+        <span class="limit-emoji" id="limit-emoji" aria-hidden="true"></span>
+        <span><strong id="limit-title"></strong><span id="limit-text"></span></span>
+      </div>
+    </div>
     <div class="wrap bottombar-inner">
       <div class="tally">
-        <strong id="tally-count">0 items</strong>
+        <strong id="tally-count">0/12 gifts</strong>
         <span id="tally-top">0/5 favorites</span>
       </div>
       <button type="button" class="btn btn-primary" id="next-btn" disabled>Next</button>

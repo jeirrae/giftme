@@ -5,7 +5,7 @@ A simple static site where each family member ticks off what they want or need f
 **Flow:** checklist → name/nickname → "Are you sure?" review → download or share the image.
 
 - Each item can be tagged **Want** or **Need**, with an optional note (size, color, brand) and ₱ price
-- Up to **5 favorites** (☆) that show up highlighted on the image
+- Up to **12 gifts** plus **5 favorites** (☆). At 12, the other gifts lock and Santa complains if you try for more
 - Add your own items under "Something else?"
 - Progress is saved in the browser, so refreshing won't lose anything
 - Christmas countdown and automatic dark mode

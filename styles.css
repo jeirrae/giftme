@@ -294,3 +294,26 @@ input::placeholder { color: var(--muted); }
   border: 0; background: none; padding: 0; cursor: pointer;
   color: var(--green); font-weight: 600; font-size: inherit;
 }
+
+/* Gift limit */
+.limit {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin: 12px 0 0; padding: 12px 14px; border-radius: 16px;
+  font-size: 14px; line-height: 1.4;
+}
+.limit strong { display: block; font-size: 15px; font-weight: 700; }
+.limit-emoji { font-size: 28px; line-height: 1; }
+.limit.full { background: #fff6dc; color: #6b4a00; }
+.limit.over { background: #fdecee; color: #8f0c22; }
+@media (prefers-color-scheme: dark) {
+  .limit.full { background: #3a2f10; color: #ffe08a; }
+  .limit.over { background: #3a1419; color: #ffb3bd; }
+}
+.limit.shake { animation: shake .45s; }
+@keyframes shake {
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.tally strong.over { color: var(--red); }
+.item.is-locked .check { opacity: .4; }
+.custom-form.is-locked { opacity: .5; }
