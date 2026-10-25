@@ -431,6 +431,12 @@
     return cat.items.slice().sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  // A–Z also orders the categories; "Something else" always stays last.
+  function sortedCategories() {
+    if (sortMode !== "az") return CATEGORIES;
+    return CATEGORIES.slice().sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   function syncSortToggle() {
     const btn = $("#sort-toggle");
     btn.textContent = sortMode === "az" ? "A–Z" : "Default";
@@ -448,7 +454,7 @@
 
   function renderCategories() {
     const host = $("#categories");
-    host.innerHTML = CATEGORIES.map((cat) =>
+    host.innerHTML = sortedCategories().map((cat) =>
       catHTML(cat.id, cat.name, `<ul class="items">${sortedItems(cat).map((it) => itemHTML(it.id, it.name)).join("")}</ul>`)
     ).join("") + catHTML("custom", "Something else", `
         <form id="custom-form" class="custom-form" autocomplete="off">
