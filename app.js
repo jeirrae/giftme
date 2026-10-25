@@ -797,7 +797,7 @@
     }
     if (data.custom.length) {
       boxes.push(measureListBox(mctx, {
-        title: "Something else", items: data.custom, bg: C.box, theme: THEME.light,
+        title: "Something else", items: data.custom, bg: C.box, theme: THEME.light, inner: true,
       }, fullW, s));
     }
 
@@ -814,14 +814,21 @@
   }
 
   // A box of items, each with a small Want/Need pill.
+  // A box of items, each with a small Want/Need pill. With o.inner, the
+  // rows sit in a white inner box laid out exactly like a category box, so
+  // they share the middle box's guide lines.
   function measureListBox(mctx, o, w, s) {
     const padX = 32 * s;
     const padTop = 30 * s;
-    const padBottom = 12 * s;
+    const padBottom = (o.inner ? 28 : 12) * s;
     const headerSize = (o.star ? 24 : 22) * s;
-    const headerH = headerSize + 12 * s;
-    const rows = o.items.map((it) => measureRow(mctx, it, w - padX * 2, s, o.theme, { tag: true, big: o.big }));
-    const h = padTop + headerH + rows.reduce((a, r) => a + r.h, 0) + padBottom;
+    const headerH = headerSize + (o.inner ? 18 : 12) * s;
+    const innerPad = o.inner ? 22 * s : 0;
+    const innerY = o.inner ? 6 * s : 0;
+    const rowW = w - padX * 2 - innerPad * 2;
+    const rows = o.items.map((it) => measureRow(mctx, it, rowW, s, o.theme, { tag: true, big: o.big }));
+    const rowsH = rows.reduce((a, r) => a + r.h, 0) + innerY * 2;
+    const h = padTop + headerH + rowsH + padBottom;
 
     return {
       h,
@@ -841,10 +848,17 @@
         ctx.fillStyle = o.star ? "#ffffff" : o.theme.muted;
         ctx.fillText(o.title, hx, hy);
 
-        let ry = y + padTop + headerH;
+        const top = y + padTop + headerH;
+        if (o.inner) {
+          roundRect(ctx, x + padX, top, w - padX * 2, rowsH, 24);
+          ctx.fillStyle = C.inner;
+          ctx.fill();
+        }
+        const left = x + padX + innerPad;
+        let ry = top + innerY;
         rows.forEach((r, i) => {
-          if (i > 0) hairline(ctx, x + padX, x + w - padX, ry, o.theme.hairline);
-          r.draw(ctx, x + padX, ry);
+          if (i > 0) hairline(ctx, left, left + rowW, ry, o.theme.hairline);
+          r.draw(ctx, left, ry);
           ry += r.h;
         });
       },
