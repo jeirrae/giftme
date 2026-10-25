@@ -666,7 +666,7 @@
   // Want / Need pills share one saturation so neither shouts louder.
   const PILL = { want: "#d29a17", need: "#2f9a5c" };
   const THEME = {
-    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.78)", hairline: "rgba(255,255,255,0.2)" },
+    fav: { text: "#ffffff", muted: "rgba(255,255,255,0.78)", hairline: "rgba(255,255,255,0.2)", pillBorder: "#ffffff" },
     light: { text: C.text, muted: C.muted, hairline: C.hairline },
   };
   const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -975,7 +975,7 @@
         let rx = x + w;
         if (opt.tag) {
           rx -= pillW;
-          kindPill(ctx, rx, mid, kind, pillSize, pillH);
+          kindPill(ctx, rx, mid, kind, pillSize, pillH, theme.pillBorder);
           rx -= 14 * s;
         }
         if (price) {
@@ -1008,7 +1008,7 @@
     return kindParts(kind).reduce((w, k) => w + ctx.measureText(KIND_LABEL[k]).width + size * 1.4, 0);
   }
 
-  function kindPill(ctx, x, cy, kind, size, h) {
+  function kindPill(ctx, x, cy, kind, size, h, border) {
     const w = kindPillWidth(ctx, kind, size);
     ctx.save();
     roundRect(ctx, x, cy - h / 2, w, h, h / 2);
@@ -1026,6 +1026,14 @@
       px += pw;
     });
     ctx.restore();
+    if (border) {
+      // Thin outline, drawn just inside the pill's edge.
+      const bw = Math.max(1.5, size * 0.12);
+      roundRect(ctx, x + bw / 2, cy - h / 2 + bw / 2, w - bw, h - bw, (h - bw) / 2);
+      ctx.strokeStyle = border;
+      ctx.lineWidth = bw;
+      ctx.stroke();
+    }
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
     return w;
